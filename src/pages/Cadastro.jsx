@@ -48,7 +48,8 @@ export default function Cadastro() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow">
-      <h2 className="text-2xl font-semibold mb-4">Cadastro de Paciente</h2>
+      <h2 className="text-2xl font-semibold mb-4" style={{ color: '#003e6b' }}>
+  Cadastro de Paciente</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium">Nome Completo</label>

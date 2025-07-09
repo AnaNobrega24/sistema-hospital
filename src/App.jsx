@@ -10,11 +10,12 @@ import Triagem  from './pages/Triagem.jsx'
 import Medico   from './pages/Medico.jsx'
 import Painel   from './pages/Painel.jsx'
 
-import './App.css'
+// ⚠️ Corrigido o caminho para onde seu CSS realmente está
+import './styles/App.css'
 
 export default function App() {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Header />
 
       <main className="flex-grow">
@@ -27,6 +28,6 @@ export default function App() {
       </main>
 
       <Footer />
-    </>
+    </div>
   )
 }

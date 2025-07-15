@@ -1,11 +1,15 @@
 import React from 'react'
 import { Routes, Route } from 'react-router-dom'
-import Header from './components/Header.jsx'
-import Footer from './components/Footer.jsx'
-import Cadastro from './pages/Cadastro.jsx'
-import Triagem from './pages/Triagem.jsx'
-import Medico from './pages/Medico.jsx'
-import Painel from './pages/Painel.jsx'
+
+import Header   from './components/Header.jsx'
+import Footer   from './components/Footer.jsx'
+import Cadastro from './components/Cadastro.jsx'
+import Triagem  from './components/Triagem.jsx'
+import Medico   from './components/Medico.jsx'
+import Painel   from './components/Painel.jsx'
+
+// ⚠️ Corrigido o caminho para onde seu CSS realmente está
+import './styles/App.css'
 
 export default function App() {
   return (

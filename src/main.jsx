@@ -1,18 +1,17 @@
-// src/main.jsx
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
-
-
-import App from './App.jsx'
-
+import { AtendimentoProvider } from './context/AtendimentoContext'
+import App from './App'
 import './styles/index.css'
 import './styles/App.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <AtendimentoProvider>
+        <App />
+      </AtendimentoProvider>
     </BrowserRouter>
   </React.StrictMode>
 )

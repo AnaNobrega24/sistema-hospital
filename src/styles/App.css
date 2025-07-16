@@ -1,18 +1,13 @@
-/* Garante que toda a página use 100% da altura da janela */
 html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
 }
-
-/* Layout principal da aplicação */
 .app-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
-
-/* Área que cresce para empurrar o footer */
 .main-content {
   flex: 1;
 }

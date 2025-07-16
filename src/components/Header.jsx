@@ -8,12 +8,10 @@ export default function Header() {
     const id = setInterval(() => setTime(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
-
   const linkCls = ({ isActive }) =>
     `px-3 py-2 text-sm font-medium ${isActive
       ? 'border-b-2 border-hospital-blue text-hospital-blue'
       : 'text-gray-600 hover:text-hospital-blue'}`
-  
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto flex items-center justify-between h-16 px-4">
@@ -22,10 +20,10 @@ export default function Header() {
           <span className="text-xl font-semibold text-gray-900">Sistema Hospitalar</span>
         </div>
         <nav className="flex space-x-4">
-          <NavLink to="/"        className={linkCls} end>Cadastro</NavLink>
+          <NavLink to="/" className={linkCls} end>Cadastro</NavLink>
           <NavLink to="/triagem" className={linkCls}>Triagem</NavLink>
-          <NavLink to="/medico"  className={linkCls}>Médico</NavLink>
-          <NavLink to="/painel"  className={linkCls}>Painel</NavLink>
+          <NavLink to="/medico" className={linkCls}>Médico</NavLink>
+          <NavLink to="/painel" className={linkCls}>Painel</NavLink>
         </nav>
         <div className="flex items-center space-x-4">
           <span className="font-mono text-gray-500 text-sm">

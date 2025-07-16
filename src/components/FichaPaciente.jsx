@@ -1,7 +1,7 @@
 import React from 'react'
 
 export default function FichaPaciente({ paciente }) {
-  if (!paciente) return <div className="p-4">Paciente não encontrado.</div>
+  if (!paciente) return <div className="p-4">Paciente não encontrado.</div>;
 
   return (
     <div className="p-4 bg-white rounded shadow-md max-w-xl mx-auto">
@@ -12,6 +12,15 @@ export default function FichaPaciente({ paciente }) {
       <div className="mb-2"><strong>Telefone:</strong> {paciente.phone}</div>
       <div className="mb-2"><strong>Endereço:</strong> {paciente.address}</div>
       <div className="mb-2"><strong>Motivo da Visita:</strong> {paciente.reason || 'Motivo não informado'}</div>
-      {paciente.temperature && <div className="mb-2"><strong>Temperatura:</strong> {paciente.temperature} °C</div>}
-      {paciente.bloodPressure && <div className="mb-2"><strong>Pressão:</strong> {paciente.bloodPressure}</div>}
-      {paciente.priority && <div className="mb-2"><strong>Prioridade:</strong> {pacient
+      {paciente.temperature && (
+        <div className="mb-2"><strong>Temperatura:</strong> {paciente.temperature} °C</div>
+      )}
+      {paciente.bloodPressure && (
+        <div className="mb-2"><strong>Pressão:</strong> {paciente.bloodPressure}</div>
+      )}
+      {paciente.priority && (
+        <div className="mb-2"><strong>Prioridade:</strong> {paciente.priority}</div>
+      )}
+    </div>
+  );
+}

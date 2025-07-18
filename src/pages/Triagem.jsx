@@ -53,9 +53,7 @@ export default function Triagem() {
           {pacientesTriagem.map((p) => (
             <li
               key={p.id}
-              className={`border p-4 rounded shadow-sm bg-gray-50 transition ${
-                selectedId === p.id ? 'border-blue-500' : ''
-              }`}
+              className="border p-4 rounded shadow-sm bg-gray-50 transition"
             >
               {/* Título clicável */}
               <div
@@ -159,9 +157,10 @@ export default function Triagem() {
                     </select>
                   </div>
 
+                  {/* ✅ Botão com cor verde-esperança */}
                   <button
                     onClick={() => handleEnviarParaMedico(p.id)}
-                    className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition mt-4"
+                    className="w-full bg-[#27ae60] text-white py-2 rounded hover:bg-[#219150] transition mt-4"
                   >
                     Enviar para Médico
                   </button>

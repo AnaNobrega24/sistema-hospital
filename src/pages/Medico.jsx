@@ -26,9 +26,7 @@ export default function Medico() {
   }, [])
 
   const updatePatient = (id, changes) => {
-    const stored = localStorage.getItem('patients')
-    const existing = stored ? JSON.parse(stored) : []
-    const updated = existing.map(p => p.id === id ? { ...p, ...changes } : p)
+    const updated = patients.map(p => p.id === id ? { ...p, ...changes } : p)
     localStorage.setItem('patients', JSON.stringify(updated))
     window.dispatchEvent(new Event('patientsChanged'))
     setPatients(updated)
@@ -45,7 +43,8 @@ export default function Medico() {
   const current = patients.find(p => p.status === 'em-atendimento')
 
   const handleChange = (e) => {
-    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+    const { name, value } = e.target
+    setForm(prev => ({ ...prev, [name]: value }))
   }
 
   const concluirAtendimento = () => {
@@ -65,12 +64,14 @@ export default function Medico() {
     })
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow">
-      <h2 className="text-2xl font-semibold mb-4">Atendimento Médico</h2>
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow">
+      <h2 className="text-2xl font-bold mb-6">Atendimento Médico</h2>
 
       {current ? (
         <div className="space-y-4">
-          <div className="p-4 bg-gray-50 rounded">
+          {/* Dados do Paciente */}
+          <div className="bg-gray-50 p-4 rounded border">
+            <h3 className="text-lg font-semibold mb-2">Informações do Paciente</h3>
             <p><strong>Nome:</strong> {current.name}</p>
             <p><strong>Motivo da Visita:</strong> {current.reason}</p>
             <p><strong>Temperatura:</strong> {current.temperature}</p>
@@ -78,30 +79,60 @@ export default function Medico() {
             <p><strong>Prioridade:</strong> {renderPriority(current.priority)}</p>
           </div>
 
+          {/* Formulário Médico */}
           <form className="space-y-4">
             <div>
-              <label className="block font-semibold">Diagnóstico</label>
+              <label className="block font-semibold">Sinais e Sintomas</label>
               <textarea
-                name="diagnostico"
-                className="w-full p-2 border rounded"
-                value={form.diagnostico || ''}
+                name="sintomas"
+                className="w-full border p-2 rounded"
+                value={form.sintomas || ''}
                 onChange={handleChange}
               />
             </div>
+
             <div>
-              <label className="block font-semibold">Prescrição</label>
+              <label className="block font-semibold">Diagnóstico CID-10</label>
+              <input
+                type="text"
+                name="cid10"
+                className="w-full border p-2 rounded"
+                value={form.cid10 || ''}
+                onChange={handleChange}
+                placeholder="Ex: K52.9 - Gastroenterite"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold">Tipo de Atendimento</label>
+              <select
+                name="tipoAtendimento"
+                value={form.tipoAtendimento || ''}
+                onChange={handleChange}
+                className="w-full border p-2 rounded"
+              >
+                <option value="">Selecione</option>
+                <option value="ambulatorial">Ambulatorial</option>
+                <option value="urgencia">Urgência</option>
+                <option value="internacao">Internação</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block font-semibold">Prescrição Médica</label>
               <textarea
                 name="prescricao"
-                className="w-full p-2 border rounded"
+                className="w-full border p-2 rounded"
                 value={form.prescricao || ''}
                 onChange={handleChange}
               />
             </div>
+
             <div>
               <label className="block font-semibold">Observações</label>
               <textarea
                 name="observacoes"
-                className="w-full p-2 border rounded"
+                className="w-full border p-2 rounded"
                 value={form.observacoes || ''}
                 onChange={handleChange}
               />
@@ -110,7 +141,7 @@ export default function Medico() {
 
           <button
             onClick={concluirAtendimento}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            className="w-full bg-green-600 text-white py-3 rounded hover:bg-green-700"
           >
             Concluir Atendimento
           </button>
@@ -119,7 +150,7 @@ export default function Medico() {
         patients.some(p => p.status === 'aguardando-atendimento') ? (
           <button
             onClick={callNext}
-            className="mb-6 px-6 py-3 bg-hospital-blue text-white rounded hover:bg-hospital-dark flex items-center gap-2"
+            className="mb-6 px-6 py-3 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
           >
             <FaUserMd /> Chamar Próximo
           </button>
@@ -128,12 +159,12 @@ export default function Medico() {
         )
       )}
 
-      <h3 className="text-xl font-semibold mt-8 mb-2">Fila de Espera</h3>
+      <h3 className="text-xl font-semibold mt-10 mb-2">Fila de Espera</h3>
       <ul className="space-y-2">
         {fila.map(p => (
           <li
             key={p.id}
-            className="p-3 bg-gray-50 rounded border-l-4 border-hospital-blue"
+            className="p-3 bg-gray-50 rounded border"
           >
             <div className="flex flex-col">
               <div>
@@ -143,7 +174,7 @@ export default function Medico() {
               <Link
                 to={`/prontuario/${p.id}`}
                 onClick={() => updatePatient(p.id, { status: 'em-atendimento' })}
-                className="text-blue-600 hover:underline text-sm mt-1"
+                className="text-green-700 hover:underline text-sm mt-1"
               >
                 Abrir Prontuário
               </Link>

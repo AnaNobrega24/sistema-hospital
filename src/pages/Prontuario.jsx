@@ -28,8 +28,6 @@ export default function Prontuario() {
     )
     localStorage.setItem('patients', JSON.stringify(updated))
     window.dispatchEvent(new Event('patientsChanged'))
-
-    // ✅ Após salvar, volta para a tela do médico
     navigate('/medico')
   }
 
@@ -38,26 +36,35 @@ export default function Prontuario() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto bg-white p-6 rounded shadow">
-      <h2 className="text-2xl font-bold mb-4">Prontuário Médico</h2>
+    <div className="max-w-5xl mx-auto bg-white p-6 rounded shadow">
+      <h2 className="text-2xl font-bold mb-6">Prontuário Médico</h2>
 
-      <section className="mb-6">
-        <h3 className="text-xl font-semibold mb-2">Informações do Paciente</h3>
-        <p><strong>Nome:</strong> {paciente.name}</p>
-        <p><strong>Data de Nascimento:</strong> {new Date(paciente.dob).toLocaleDateString('pt-BR')}</p>
-        <p><strong>Documento:</strong> {paciente.document}</p>
-        <p><strong>Telefone:</strong> {paciente.phone}</p>
-        <p><strong>Endereço:</strong> {paciente.address}</p>
-        <p><strong>Temperatura:</strong> {paciente.temperature} °C</p>
-        <p><strong>Pressão:</strong> {paciente.bloodPressure}</p>
-        <p><strong>Frequência Cardíaca:</strong> {paciente.heartRate}</p>
-        <p><strong>Frequência Respiratória:</strong> {paciente.respiratoryRate}</p>
-        <p><strong>Alergias:</strong> {paciente.allergies}</p>
-        <p><strong>Motivo da Visita:</strong> {paciente.reason}</p>
-        <p><strong>Notas da Enfermagem:</strong> {paciente.notes}</p>
-        <hr className="my-4" />
+      {/* Informações separadas */}
+      <section className="grid md:grid-cols-2 gap-6 mb-8">
+        {/* Pessoais */}
+        <div className="bg-gray-50 p-4 rounded shadow">
+          <h3 className="text-lg font-semibold text-[#27ae60] mb-3">👤 Informações Pessoais</h3>
+          <p><strong>Nome:</strong> {paciente.name}</p>
+          <p><strong>Data de Nascimento:</strong> {new Date(paciente.dob).toLocaleDateString('pt-BR')}</p>
+          <p><strong>Documento:</strong> {paciente.document}</p>
+          <p><strong>Telefone:</strong> {paciente.phone}</p>
+          <p><strong>Endereço:</strong> {paciente.address}</p>
+        </div>
+
+        {/* Médicas */}
+        <div className="bg-gray-50 p-4 rounded shadow">
+          <h3 className="text-lg font-semibold text-[#27ae60] mb-3">🩺 Informações Clínicas</h3>
+          <p><strong>Temperatura:</strong> {paciente.temperature} °C</p>
+          <p><strong>Pressão:</strong> {paciente.bloodPressure}</p>
+          <p><strong>Frequência Cardíaca:</strong> {paciente.heartRate}</p>
+          <p><strong>Frequência Respiratória:</strong> {paciente.respiratoryRate}</p>
+          <p><strong>Alergias:</strong> {paciente.allergies}</p>
+          <p><strong>Motivo da Visita:</strong> {paciente.reason}</p>
+          <p><strong>Notas da Enfermagem:</strong> {paciente.notes}</p>
+        </div>
       </section>
 
+      {/* Formulário de atendimento */}
       <form className="space-y-4">
         <div>
           <label className="font-semibold">Anamnese</label>
@@ -110,7 +117,7 @@ export default function Prontuario() {
         <button
           type="button"
           onClick={salvar}
-          className="w-full bg-green-600 text-white py-3 rounded hover:bg-green-700"
+          className="w-full bg-[#27ae60] text-white py-3 rounded hover:bg-green-700"
         >
           Finalizar Atendimento
         </button>

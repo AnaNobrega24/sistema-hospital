@@ -1,126 +1,116 @@
-import React, { useState, useEffect } from 'react'
-import { FaPrint } from 'react-icons/fa'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 export default function Cadastro() {
   const navigate = useNavigate()
-  const [patients, setPatients] = useState([])
-  const [form, setForm] = useState({
-    name: '',
-    dob: '',
-    document: '',
-    phone: '',
-    address: ''
+
+  const [paciente, setPaciente] = useState({
+    nome: '',
+    nascimento: '',
+    documento: '',
+    telefone: '',
+    endereco: '',
   })
 
-  // Carrega pacientes salvos
-  useEffect(() => {
-    const stored = localStorage.getItem('patients')
-    setPatients(stored ? JSON.parse(stored) : [])
-  }, [])
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setPaciente((prev) => ({ ...prev, [name]: value }))
+  }
 
-  // Atualiza localStorage ao alterar pacientes
-  useEffect(() => {
-    localStorage.setItem('patients', JSON.stringify(patients))
-    window.dispatchEvent(new Event('patientsChanged'))
-  }, [patients])
+  const handleSubmit = (e) => {
+    e.preventDefault()
 
-  // Salva paciente e redireciona
-  const saveAndNavigate = () => {
-    const { name, dob, document, phone, address } = form
-    if (!name || !dob || !document || !phone || !address) return false
-
-    const newPatient = {
+    const novoPaciente = {
       id: Date.now(),
-      ...form,
+      name: paciente.nome,
+      dob: paciente.nascimento,
+      document: paciente.documento,
+      phone: paciente.telefone,
+      address: paciente.endereco,
+      reason: '', // será preenchido na triagem
+      priority: '', // será definido na triagem
       status: 'cadastrado',
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     }
 
-    const updated = [...patients, newPatient]
-    localStorage.setItem('patients', JSON.stringify(updated)) // salva direto
+    const pacientesSalvos = JSON.parse(localStorage.getItem('patients')) || []
+    const pacientesAtualizados = [...pacientesSalvos, novoPaciente]
+    localStorage.setItem('patients', JSON.stringify(pacientesAtualizados))
     window.dispatchEvent(new Event('patientsChanged'))
-    setPatients(updated)
 
-    setForm({ name: '', dob: '', document: '', phone: '', address: '' })
     navigate('/triagem')
-    return true
-  }
-
-  // Botão de imprimir
-  const handlePrint = () => {
-    if (saveAndNavigate()) {
-      setTimeout(() => window.print(), 300)
-    }
-  }
-
-  // Atualiza formulário
-  const handleChange = e => {
-    setForm({ ...form, [e.target.name]: e.target.value })
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow">
-      <h2 className="text-2xl font-semibold mb-4 text-hospital-dark">Cadastro de Paciente</h2>
-      <div className="space-y-4">
+    <div className="max-w-xl mx-auto bg-white p-8 rounded shadow">
+      <h2 className="text-2xl font-bold mb-6">Cadastro de Paciente</h2>
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium">Nome Completo</label>
+          <label className="block mb-1 font-medium">Nome Completo</label>
           <input
-            name="name"
-            value={form.name}
+            type="text"
+            name="nome"
+            value={paciente.nome}
             onChange={handleChange}
-            className="mt-1 w-full px-4 py-2 border rounded"
+            className="w-full border p-2 rounded"
+            required
           />
         </div>
+
         <div>
-          <label className="block text-sm font-medium">Data de Nascimento</label>
+          <label className="block mb-1 font-medium">Data de Nascimento</label>
           <input
-            name="dob"
             type="date"
-            value={form.dob}
+            name="nascimento"
+            value={paciente.nascimento}
             onChange={handleChange}
-            className="mt-1 w-full px-4 py-2 border rounded"
+            className="w-full border p-2 rounded"
+            required
           />
         </div>
+
         <div>
-          <label className="block text-sm font-medium">Documento (CPF/RG)</label>
+          <label className="block mb-1 font-medium">Documento (CPF/RG)</label>
           <input
-            name="document"
-            value={form.document}
+            type="text"
+            name="documento"
+            value={paciente.documento}
             onChange={handleChange}
-            className="mt-1 w-full px-4 py-2 border rounded"
+            className="w-full border p-2 rounded"
+            required
           />
         </div>
+
         <div>
-          <label className="block text-sm font-medium">Telefone</label>
+          <label className="block mb-1 font-medium">Telefone</label>
           <input
-            name="phone"
             type="tel"
-            value={form.phone}
+            name="telefone"
+            value={paciente.telefone}
             onChange={handleChange}
-            className="mt-1 w-full px-4 py-2 border rounded"
+            className="w-full border p-2 rounded"
+            required
           />
         </div>
+
         <div>
-          <label className="block text-sm font-medium">Endereço</label>
+          <label className="block mb-1 font-medium">Endereço</label>
           <textarea
-            name="address"
-            rows={2}
-            value={form.address}
+            name="endereco"
+            value={paciente.endereco}
             onChange={handleChange}
-            className="mt-1 w-full px-4 py-2 border rounded"
+            className="w-full border p-2 rounded"
+            required
           />
         </div>
-      </div>
-      <div className="mt-6 flex justify-center">
+
         <button
-          onClick={handlePrint}
-          className="flex-1 flex items-center justify-center space-x-2 py-3 bg-gray-700 text-white rounded-lg shadow-md hover:bg-gray-600 transition cursor-pointer"
+          type="submit"
+          className="w-full bg-[#2c3e50] text-white py-3 rounded hover:bg-[#34495e] transition-colors cursor-pointer"
         >
-          <FaPrint />
-          <span>Imprimir Ficha</span>
+          Cadastrar Paciente
         </button>
-      </div>
+      </form>
     </div>
   )
 }

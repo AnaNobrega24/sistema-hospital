@@ -1,8 +1,19 @@
 import React, { useState, useEffect } from 'react'
 import { FaUserMd } from 'react-icons/fa'
+import { Link } from 'react-router-dom'
+
+const renderPriority = (priority) => {
+  switch (priority) {
+    case 'alta': return '🔴 Vermelho (Alta)'
+    case 'media': return '🟡 Amarelo (Média)'
+    case 'baixa': return '🟢 Verde (Baixa)'
+    default: return '⚪️ Não definida'
+  }
+}
 
 export default function Medico() {
   const [patients, setPatients] = useState([])
+  const [form, setForm] = useState({})
 
   useEffect(() => {
     const load = () => {
@@ -15,82 +26,130 @@ export default function Medico() {
   }, [])
 
   const updatePatient = (id, changes) => {
-    const updated = patients.map(p => p.id === id ? { ...p, ...changes } : p)
-    setPatients(updated)
+    const stored = localStorage.getItem('patients')
+    const existing = stored ? JSON.parse(stored) : []
+    const updated = existing.map(p => p.id === id ? { ...p, ...changes } : p)
     localStorage.setItem('patients', JSON.stringify(updated))
     window.dispatchEvent(new Event('patientsChanged'))
+    setPatients(updated)
   }
-
-  const waiting = patients
-    .filter(p => ['aguardando-atendimento', 'em-atendimento'].includes(p.status))
-    .sort((a, b) => {
-      if (a.status === 'em-atendimento' && b.status !== 'em-atendimento') return -1
-      if (b.status === 'em-atendimento' && a.status !== 'em-atendimento') return 1
-      const order = { alta: 3, media: 2, baixa: 1 }
-      if (order[b.priority] !== order[a.priority]) return order[b.priority] - order[a.priority]
-      return new Date(a.createdAt) - new Date(b.createdAt)
-    })
 
   const callNext = () => {
-    const next = waiting.find(p => p.status === 'aguardando-atendimento')
-    if (next) updatePatient(next.id, { status: 'em-atendimento' })
+    const next = patients.find(p => p.status === 'aguardando-atendimento')
+    if (next) {
+      updatePatient(next.id, { status: 'em-atendimento' })
+      setForm({})
+    }
   }
 
-  const current = waiting.find(p => p.status === 'em-atendimento')
+  const current = patients.find(p => p.status === 'em-atendimento')
+
+  const handleChange = (e) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  const concluirAtendimento = () => {
+    updatePatient(current.id, {
+      status: 'concluido',
+      atendimento: form
+    })
+    setForm({})
+    setTimeout(callNext, 0)
+  }
+
+  const fila = patients
+    .filter(p => p.status === 'aguardando-atendimento')
+    .sort((a, b) => {
+      const order = { alta: 3, media: 2, baixa: 1 }
+      return (order[b.priority] || 0) - (order[a.priority] || 0)
+    })
 
   return (
     <div className="max-w-3xl mx-auto p-6 bg-white rounded-xl shadow">
       <h2 className="text-2xl font-semibold mb-4">Atendimento Médico</h2>
 
       {current ? (
-        <div className="flex justify-between items-center mb-6 p-4 bg-gray-50 rounded">
-          <span className="font-semibold">
-            Atendendo: <strong>{current.name}</strong> — {current.reason || 'Motivo não informado'}
-          </span>
+        <div className="space-y-4">
+          <div className="p-4 bg-gray-50 rounded">
+            <p><strong>Nome:</strong> {current.name}</p>
+            <p><strong>Motivo da Visita:</strong> {current.reason}</p>
+            <p><strong>Temperatura:</strong> {current.temperature}</p>
+            <p><strong>Pressão:</strong> {current.bloodPressure}</p>
+            <p><strong>Prioridade:</strong> {renderPriority(current.priority)}</p>
+          </div>
+
+          <form className="space-y-4">
+            <div>
+              <label className="block font-semibold">Diagnóstico</label>
+              <textarea
+                name="diagnostico"
+                className="w-full p-2 border rounded"
+                value={form.diagnostico || ''}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <label className="block font-semibold">Prescrição</label>
+              <textarea
+                name="prescricao"
+                className="w-full p-2 border rounded"
+                value={form.prescricao || ''}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <label className="block font-semibold">Observações</label>
+              <textarea
+                name="observacoes"
+                className="w-full p-2 border rounded"
+                value={form.observacoes || ''}
+                onChange={handleChange}
+              />
+            </div>
+          </form>
+
           <button
-            onClick={() => {
-              updatePatient(current.id, { status: 'concluido' })
-              setTimeout(callNext, 0)
-            }}
-            className="px-4 py-2 bg-hospital-blue text-white rounded hover:bg-hospital-dark"
+            onClick={concluirAtendimento}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
           >
-            Concluir
+            Concluir Atendimento
           </button>
         </div>
       ) : (
-        <button
-          onClick={callNext}
-          className="mb-6 px-6 py-3 bg-hospital-blue text-white rounded hover:bg-hospital-dark flex items-center gap-2"
-        >
-          <FaUserMd /> Chamar Próximo
-        </button>
+        patients.some(p => p.status === 'aguardando-atendimento') ? (
+          <button
+            onClick={callNext}
+            className="mb-6 px-6 py-3 bg-hospital-blue text-white rounded hover:bg-hospital-dark flex items-center gap-2"
+          >
+            <FaUserMd /> Chamar Próximo
+          </button>
+        ) : (
+          <p className="text-gray-500 italic mb-6">Nenhum paciente aguardando na fila.</p>
+        )
       )}
 
-      <h3 className="text-xl font-semibold mb-2">Fila de Espera</h3>
+      <h3 className="text-xl font-semibold mt-8 mb-2">Fila de Espera</h3>
       <ul className="space-y-2">
-        {waiting.map(p => (
+        {fila.map(p => (
           <li
             key={p.id}
             className="p-3 bg-gray-50 rounded border-l-4 border-hospital-blue"
           >
-            <strong>{p.name}</strong> — {p.reason || 'Motivo não informado'}
-            {p.status === 'em-atendimento' && ' (em atendimento)'}
+            <div className="flex flex-col">
+              <div>
+                <strong>{p.name}</strong> — {p.reason || 'Motivo não informado'}
+              </div>
+              <span className="text-sm text-gray-600">{renderPriority(p.priority)}</span>
+              <Link
+                to={`/prontuario/${p.id}`}
+                onClick={() => updatePatient(p.id, { status: 'em-atendimento' })}
+                className="text-blue-600 hover:underline text-sm mt-1"
+              >
+                Abrir Prontuário
+              </Link>
+            </div>
           </li>
         ))}
-      </ul>
-
-      <h3 className="text-xl font-semibold mt-8 mb-2">Histórico de Atendimentos</h3>
-      <ul className="space-y-2">
-        {patients
-          .filter(p => p.status === 'concluido')
-          .map(p => (
-            <li
-              key={p.id}
-              className="p-3 bg-gray-50 rounded border-l-4 border-green-500"
-            >
-              <strong>{p.name}</strong> — {p.reason || 'Motivo não informado'} — {p.priority?.charAt(0).toUpperCase() + p.priority?.slice(1)}
-            </li>
-          ))}
       </ul>
     </div>
   )

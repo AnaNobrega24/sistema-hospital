@@ -1,7 +1,22 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 
-export default function FichaPaciente({ paciente }) {
-  if (!paciente) return <div className="p-4">Paciente não encontrado.</div>;
+export default function FichaPaciente({ paciente: propPaciente }) {
+  const { id } = useParams()
+  const [paciente, setPaciente] = useState(propPaciente || null)
+
+  useEffect(() => {
+    if (!propPaciente && id) {
+      const stored = localStorage.getItem('patients')
+      const patients = stored ? JSON.parse(stored) : []
+      const encontrado = patients.find(p => p.id === Number(id))
+      setPaciente(encontrado || null)
+    }
+  }, [propPaciente, id])
+
+  if (!paciente) {
+    return <div className="p-4">Paciente não encontrado.</div>
+  }
 
   return (
     <div className="p-4 bg-white rounded shadow-md max-w-xl mx-auto">
@@ -22,5 +37,5 @@ export default function FichaPaciente({ paciente }) {
         <div className="mb-2"><strong>Prioridade:</strong> {paciente.priority}</div>
       )}
     </div>
-  );
+  )
 }

@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react'
-import { FaClipboardList, FaCheckCircle } from 'react-icons/fa'
-import { useNavigate } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { getPriorityByReason } from '../utils/triagem'
 
 export default function Triagem() {
-  const navigate = useNavigate()
   const [patients, setPatients] = useState([])
-  const [formData, setFormData] = useState({})
+  const [selectedId, setSelectedId] = useState(null)
 
   useEffect(() => {
     const load = () => {
       const stored = localStorage.getItem('patients')
-      setPatients(stored ? JSON.parse(stored) : [])
+      const data = stored ? JSON.parse(stored) : []
+      setPatients(data)
     }
     load()
     window.addEventListener('patientsChanged', load)
@@ -18,187 +17,159 @@ export default function Triagem() {
   }, [])
 
   const updatePatient = (id, changes) => {
-    const updated = patients.map(p =>
-      p.id === id ? { ...p, ...changes } : p
-    )
+    const updated = patients.map(p => p.id === id ? { ...p, ...changes } : p)
     setPatients(updated)
     localStorage.setItem('patients', JSON.stringify(updated))
     window.dispatchEvent(new Event('patientsChanged'))
   }
 
-  const handleField = (id, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [id]: { ...prev[id], [field]: value }
-    }))
+  const handleFieldChange = (id, field, value) => {
+    setPatients(prev =>
+      prev.map(p =>
+        p.id === id ? { ...p, [field]: value } : p
+      )
+    )
   }
 
-  const startTriage = id => {
-    updatePatient(id, { status: 'em-triagem' })
-  }
-
-  const confirmTriage = id => {
-    const data = formData[id] || {}
-    const requiredFields = ['priority', 'temperature', 'bloodPressure', 'heartRate', 'oxygen', 'glucose', 'reason']
-    const allFilled = requiredFields.every(f => data[f])
-
-    if (!allFilled) return alert('Por favor, preencha todos os campos da triagem.')
-
+  const handleEnviarParaMedico = (id) => {
+    const patient = patients.find(p => p.id === id)
     updatePatient(id, {
-      ...data,
-      status: 'aguardando-atendimento',
-      triageDate: new Date().toISOString()
+      ...patient,
+      status: 'aguardando-atendimento'
     })
-
-    setFormData(prev => {
-      const copy = { ...prev }
-      delete copy[id]
-      return copy
-    })
-
-    navigate('/medico')
+    setSelectedId(null)
   }
 
-  const queue = patients.filter(
-    p => p.status === 'cadastrado' || p.status === 'em-triagem'
-  )
+  const pacientesTriagem = patients.filter(p => p.status === 'cadastrado')
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-xl shadow space-y-6">
-      <h2 className="text-2xl font-semibold">Triagem de Pacientes</h2>
-      <p className="text-gray-600">
-        Revise os dados do paciente, registre sinais vitais e defina a prioridade.
-      </p>
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded shadow">
+      <h2 className="text-2xl font-bold mb-6">Triagem de Pacientes</h2>
 
-      {queue.length === 0 ? (
-        <p className="text-gray-500 flex items-center">
-          <FaClipboardList className="mr-2" />
-          Nenhum paciente para triagem
-        </p>
+      {pacientesTriagem.length === 0 ? (
+        <p className="text-gray-500">Nenhum paciente aguardando triagem.</p>
       ) : (
-        queue.map((p, i) => (
-          <div key={p.id} className="border rounded-lg p-6 space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="font-mono text-gray-600">#{String(i + 1).padStart(2, '0')}</span>
-              {p.status === 'cadastrado' ? (
-                <button
-                  onClick={() => startTriage(p.id)}
-                  className="px-4 py-2 bg-hospital-blue text-white rounded hover:bg-hospital-dark"
-                >
-                  Iniciar Triagem
-                </button>
-              ) : (
-                <span className="text-sm font-medium text-hospital-blue">Em Triagem</span>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-gray-700"><strong>Nome:</strong> {p.name}</p>
-                <p className="text-gray-700"><strong>Nasc:</strong> {new Date(p.dob).toLocaleDateString('pt-BR')}</p>
-                <p className="text-gray-700"><strong>Documento:</strong> {p.document}</p>
-                <p className="text-gray-700"><strong>Telefone:</strong> {p.phone}</p>
-                <p className="text-gray-700"><strong>Endereço:</strong> {p.address}</p>
+        <ul className="space-y-4">
+          {pacientesTriagem.map((p) => (
+            <li
+              key={p.id}
+              className={`border p-4 rounded shadow-sm bg-gray-50 transition ${
+                selectedId === p.id ? 'border-blue-500' : ''
+              }`}
+            >
+              {/* Título clicável */}
+              <div
+                className="cursor-pointer hover:underline"
+                onClick={() => setSelectedId(p.id === selectedId ? null : p.id)}
+              >
+                <strong>Nome:</strong> {p.name}
               </div>
-              <div>
-                <p className="text-gray-700"><strong>Registro:</strong> {p.createdAt.slice(0, 10)}</p>
-              </div>
-            </div>
 
-            {p.status === 'em-triagem' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {/* Ficha expandida */}
+              {selectedId === p.id && (
+                <div className="mt-4 border-t pt-4 space-y-3">
+                  <p><strong>Data de Nascimento:</strong> {new Date(p.dob).toLocaleDateString('pt-BR')}</p>
+                  <p><strong>Documento:</strong> {p.document}</p>
+                  <p><strong>Telefone:</strong> {p.phone}</p>
+                  <p><strong>Endereço:</strong> {p.address}</p>
+
                   <div>
-                    <label className="block text-sm font-medium">Temperatura (°C)</label>
+                    <label className="font-semibold">Temperatura Corporal (°C):</label>
                     <input
                       type="number"
                       step="0.1"
-                      value={formData[p.id]?.temperature || ''}
-                      onChange={e => handleField(p.id, 'temperature', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border rounded"
+                      value={p.temperature || ''}
+                      onChange={(e) => handleFieldChange(p.id, 'temperature', e.target.value)}
+                      className="w-full border p-2 rounded mt-1"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium">Pressão Arterial (mmHg)</label>
+                    <label className="font-semibold">Pressão Arterial:</label>
                     <input
-                      value={formData[p.id]?.bloodPressure || ''}
-                      onChange={e => handleField(p.id, 'bloodPressure', e.target.value)}
-                      placeholder="120/80"
-                      className="mt-1 w-full px-3 py-2 border rounded"
+                      type="text"
+                      value={p.bloodPressure || ''}
+                      onChange={(e) => handleFieldChange(p.id, 'bloodPressure', e.target.value)}
+                      className="w-full border p-2 rounded mt-1"
+                      placeholder="Ex: 120/80"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium">Frequência Cardíaca (bpm)</label>
-                    <input
-                      type="number"
-                      value={formData[p.id]?.heartRate || ''}
-                      onChange={e => handleField(p.id, 'heartRate', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border rounded"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium">Saturação (%)</label>
+                    <label className="font-semibold">Frequência Cardíaca (bpm):</label>
                     <input
                       type="number"
-                      value={formData[p.id]?.oxygen || ''}
-                      onChange={e => handleField(p.id, 'oxygen', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border rounded"
+                      value={p.heartRate || ''}
+                      onChange={(e) => handleFieldChange(p.id, 'heartRate', e.target.value)}
+                      className="w-full border p-2 rounded mt-1"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium">Glicemia (mg/dL)</label>
+                    <label className="font-semibold">Frequência Respiratória (rpm):</label>
                     <input
                       type="number"
-                      value={formData[p.id]?.glucose || ''}
-                      onChange={e => handleField(p.id, 'glucose', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border rounded"
+                      value={p.respiratoryRate || ''}
+                      onChange={(e) => handleFieldChange(p.id, 'respiratoryRate', e.target.value)}
+                      className="w-full border p-2 rounded mt-1"
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium">Classificação de Risco</label>
+                    <label className="font-semibold">Alergias:</label>
+                    <textarea
+                      value={p.allergies || ''}
+                      onChange={(e) => handleFieldChange(p.id, 'allergies', e.target.value)}
+                      className="w-full border p-2 rounded mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold">Motivo Principal da Consulta:</label>
+                    <textarea
+                      value={p.reason || ''}
+                      onChange={(e) => {
+                        handleFieldChange(p.id, 'reason', e.target.value)
+                        handleFieldChange(p.id, 'priority', getPriorityByReason(e.target.value))
+                      }}
+                      className="w-full border p-2 rounded mt-1"
+                      placeholder="Descreva com palavras do paciente"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold">Anotações da Enfermagem:</label>
+                    <textarea
+                      value={p.notes || ''}
+                      onChange={(e) => handleFieldChange(p.id, 'notes', e.target.value)}
+                      className="w-full border p-2 rounded mt-1"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold">Classificação de Risco:</label>
                     <select
-                      value={formData[p.id]?.priority || ''}
-                      onChange={e => handleField(p.id, 'priority', e.target.value)}
-                      className="mt-1 w-full px-3 py-2 border rounded"
+                      value={p.priority || ''}
+                      onChange={(e) => handleFieldChange(p.id, 'priority', e.target.value)}
+                      className="w-full border p-2 rounded mt-1"
                     >
-                      <option value="">Selecione</option>
-                      <option value="vermelho">🔴 Vermelho — Emergência</option>
-                      <option value="laranja">🟠 Laranja — Muito Urgente</option>
-                      <option value="amarelo">🟡 Amarelo — Urgente</option>
-                      <option value="verde">🟢 Verde — Pouco Urgente</option>
-                      <option value="azul">⚪ Azul — Não Urgente</option>
+                      <option value="alta">🔴 Vermelho (Alta)</option>
+                      <option value="media">🟡 Amarelo (Média)</option>
+                      <option value="baixa">🟢 Verde (Baixa)</option>
                     </select>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium">Queixa Principal / Motivo da Visita</label>
-                  <textarea
-                    value={formData[p.id]?.reason || ''}
-                    onChange={e => handleField(p.id, 'reason', e.target.value)}
-                    rows={3}
-                    className="mt-1 w-full px-3 py-2 border rounded"
-                  />
-                </div>
-
-                <div className="flex space-x-3">
                   <button
-                    onClick={() => confirmTriage(p.id)}
-                    className="flex items-center space-x-2 px-4 py-2 bg-hospital-blue text-white rounded hover:bg-hospital-dark"
+                    onClick={() => handleEnviarParaMedico(p.id)}
+                    className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition mt-4"
                   >
-                    <FaCheckCircle /> <span>Confirmar Triagem</span>
-                  </button>
-                  <button
-                    onClick={() => window.print()}
-                    className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600"
-                  >
-                    Imprimir Ficha
+                    Enviar para Médico
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
-        ))
+              )}
+            </li>
+          ))}
+        </ul>
       )}
     </div>
   )

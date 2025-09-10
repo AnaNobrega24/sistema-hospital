@@ -8,6 +8,10 @@ import Medico from './pages/Medico'
 import Painel from './pages/Painel'
 import FichaPaciente from './components/FichaPaciente'
 import Prontuario from './pages/Prontuario'
+import Login from './pages/Login'
+import Registro from './pages/Registro'
+import Historico from './pages/Historico'
+import Relatorios from './pages/Relatorios'
 import './styles/App.css'
 
 export default function App() {
@@ -16,6 +20,10 @@ export default function App() {
       <Header />
       <main className="flex-grow bg-gray-50">
         <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/registro" element={<Registro />} />
+          <Route path="/historico" element={<Historico />} />
+          <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/" element={<Cadastro />} />
           <Route path="/triagem" element={<Triagem />} />
           <Route path="/medico" element={<Medico />} />

@@ -5,6 +5,8 @@ export default function Triagem() {
   const [patients, setPatients] = useState([])
   const [selectedId, setSelectedId] = useState(null)
 
+  const token = localStorage.getItem("token")
+
   useEffect(() => {
     const load = () => {
       const stored = localStorage.getItem('patients')

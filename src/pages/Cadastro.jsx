@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { postApi } from '../services/apiServices'
 
 export default function Cadastro() {
   const navigate = useNavigate()
@@ -38,26 +39,30 @@ export default function Cadastro() {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault()
+    const token = localStorage.getItem("token")
 
     const novoPaciente = {
       id: Date.now(),
-      name: paciente.nome,
+      nome: paciente.nome,
       dob: paciente.nascimento,
       document: paciente.documento,
       phone: paciente.telefone,
       address: paciente.endereco,
-      reason: '',
-      priority: '',
+      motivo: '',
+      prioridade: '',
       status: 'cadastrado',
       createdAt: new Date().toISOString(),
     }
 
-    const pacientesSalvos = JSON.parse(localStorage.getItem('patients')) || []
-    const pacientesAtualizados = [...pacientesSalvos, novoPaciente]
-    localStorage.setItem('patients', JSON.stringify(pacientesAtualizados))
-    window.dispatchEvent(new Event('patientsChanged'))
+    const data = await postApi("pacientes",novoPaciente, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+      });
+    console.log(data);
+    
 
     navigate('/triagem')
   }

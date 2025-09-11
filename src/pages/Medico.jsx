@@ -15,6 +15,8 @@ export default function Medico() {
   const [patients, setPatients] = useState([])
   const [form, setForm] = useState({})
 
+  const token = localStorage.getItem("token")
+
   useEffect(() => {
     const load = () => {
       const stored = localStorage.getItem('patients')

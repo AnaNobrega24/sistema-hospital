@@ -42,26 +42,32 @@ export default function Cadastro() {
   const handleSubmit = async(e) => {
     e.preventDefault()
     const token = localStorage.getItem("token")
+    
 
     const novoPaciente = {
-      id: Date.now(),
+      //id: Date.now(),
       nome: paciente.nome,
-      dob: paciente.nascimento,
-      document: paciente.documento,
-      phone: paciente.telefone,
-      address: paciente.endereco,
-      motivo: '',
-      prioridade: '',
+      dataNascimento: paciente.nascimento,
+      documento: paciente.documento,
+      telefone: paciente.telefone,
+      endereco: paciente.endereco,
+      cep: paciente.cep,
+      // motivo: '',
+      // prioridade: '',
       status: 'cadastrado',
       createdAt: new Date().toISOString(),
     }
+    
 
     const data = await postApi("pacientes",novoPaciente, {
         headers: {
           Authorization: `Bearer ${token}`
         },
       });
-    console.log(data);
+
+    if(!data) {
+      alert("Erro ao cadastrar usuário!")
+    }
     
 
     navigate('/triagem')

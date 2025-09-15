@@ -17,8 +17,7 @@ export default function Registro() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const data = await postApi("auth/register", formData);
-    console.log(data);
+    await postApi("auth/register", formData);
     
   };
 

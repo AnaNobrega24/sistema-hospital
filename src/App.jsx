@@ -1,5 +1,7 @@
 import React from 'react'
 import { Routes, Route } from 'react-router-dom'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import Cadastro from './pages/Cadastro'
@@ -17,6 +19,7 @@ import './styles/App.css'
 export default function App() {
   return (
     <div className="flex flex-col min-h-screen">
+      <ToastContainer autoClose={3000} hideProgressBar />
       <Header />
       <main className="flex-grow bg-gray-50">
         <Routes>

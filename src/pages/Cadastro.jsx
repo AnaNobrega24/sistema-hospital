@@ -45,16 +45,14 @@ export default function Cadastro() {
     
 
     const novoPaciente = {
-      //id: Date.now(),
+      id: Date.now(),
       nome: paciente.nome,
       dataNascimento: paciente.nascimento,
       documento: paciente.documento,
       telefone: paciente.telefone,
       endereco: paciente.endereco,
       cep: paciente.cep,
-      // motivo: '',
-      // prioridade: '',
-      status: 'cadastrado',
+      status: 'CADASTRADO',
       createdAt: new Date().toISOString(),
     }
     

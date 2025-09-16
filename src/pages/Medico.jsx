@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { FaUserMd } from 'react-icons/fa'
 import { Link } from 'react-router-dom'
+import { getApi, postApi } from '../services/apiServices'
 
 const renderPriority = (priority) => {
   switch (priority) {
-    case 'alta': return '🔴 Vermelho (Alta)'
-    case 'media': return '🟡 Amarelo (Média)'
-    case 'baixa': return '🟢 Verde (Baixa)'
+    case 'ALTA': return '🔴 Vermelho (Alta)'
+    case 'MEDIA': return '🟡 Amarelo (Média)'
+    case 'BAIXA': return '🟢 Verde (Baixa)'
     default: return '⚪️ Não definida'
   }
 }
@@ -15,34 +16,45 @@ export default function Medico() {
   const [patients, setPatients] = useState([])
   const [form, setForm] = useState({})
 
-  const token = localStorage.getItem("token")
-
   useEffect(() => {
-    const load = () => {
-      const stored = localStorage.getItem('patients')
-      setPatients(stored ? JSON.parse(stored) : [])
-    }
+    const token = localStorage.getItem("token")
+        const load = async () => {
+          const data = await getApi("pacientes/fila", {
+            headers: {
+              Authorization: `Bearer ${token}` 
+            },
+          });
+          setPatients(data);
+        };
     load()
     window.addEventListener('patientsChanged', load)
     return () => window.removeEventListener('patientsChanged', load)
   }, [])
+  
 
-  const updatePatient = (id, changes) => {
+  const updatePatient = async(id, changes) => {
+    const token = localStorage.getItem("token")
     const updated = patients.map(p => p.id === id ? { ...p, ...changes } : p)
-    localStorage.setItem('patients', JSON.stringify(updated))
-    window.dispatchEvent(new Event('patientsChanged'))
     setPatients(updated)
+    const pacienteEmAtendimento = patients.filter((p) => p.id === id)
+    
+    await postApi("atendimento/iniciar", {pacienteId: pacienteEmAtendimento[0].id}, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+    window.dispatchEvent(new Event('patientsChanged'))
   }
 
   const callNext = () => {
-    const next = patients.find(p => p.status === 'aguardando-atendimento')
+    const next = patients.find(p => p.status === 'AGUARDANDO')
     if (next) {
-      updatePatient(next.id, { status: 'em-atendimento' })
+      updatePatient(next.id, { status: 'EM_ATENDIMENTO' })
       setForm({})
     }
   }
 
-  const current = patients.find(p => p.status === 'em-atendimento')
+  const current = patients.find(p => p.status === 'EM_ATENDIMENTO')
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -51,7 +63,7 @@ export default function Medico() {
 
   const concluirAtendimento = () => {
     updatePatient(current.id, {
-      status: 'concluido',
+      status: 'CONCLUIDO',
       atendimento: form
     })
     setForm({})
@@ -59,10 +71,10 @@ export default function Medico() {
   }
 
   const fila = patients
-    .filter(p => p.status === 'aguardando-atendimento')
+    .filter(p => p.status === 'AGUARDANDO')
     .sort((a, b) => {
       const order = { alta: 3, media: 2, baixa: 1 }
-      return (order[b.priority] || 0) - (order[a.priority] || 0)
+      return (order[b.triage.prioridade] || 0) - (order[a.triage.prioridade] || 0)
     })
 
   return (
@@ -74,11 +86,11 @@ export default function Medico() {
           {/* Dados do Paciente */}
           <div className="bg-gray-50 p-4 rounded border">
             <h3 className="text-lg font-semibold mb-2">Informações do Paciente</h3>
-            <p><strong>Nome:</strong> {current.name}</p>
-            <p><strong>Motivo da Visita:</strong> {current.reason}</p>
-            <p><strong>Temperatura:</strong> {current.temperature}</p>
-            <p><strong>Pressão:</strong> {current.bloodPressure}</p>
-            <p><strong>Prioridade:</strong> {renderPriority(current.priority)}</p>
+            <p><strong>Nome:</strong> {current.nome}</p>
+            <p><strong>Motivo da Visita:</strong> {current.triage.motivo}</p>
+            <p><strong>Temperatura:</strong> {current.triage.temperatura}</p>
+            <p><strong>Pressão:</strong> {current.triage.pressaoSanguinea}</p>
+            <p><strong>Prioridade:</strong> {renderPriority(current.triage.prioridade)}</p>
           </div>
 
           {/* Formulário Médico */}
@@ -170,12 +182,12 @@ export default function Medico() {
           >
             <div className="flex flex-col">
               <div>
-                <strong>{p.name}</strong> — {p.reason || 'Motivo não informado'}
+                <strong>{p.nome}</strong> — {p.triage.motivo || 'Motivo não informado'}
               </div>
-              <span className="text-sm text-gray-600">{renderPriority(p.priority)}</span>
+              <span className="text-sm text-gray-600">{renderPriority(p.triage.prioridade)}</span>
               <Link
                 to={`/prontuario/${p.id}`}
-                onClick={() => updatePatient(p.id, { status: 'em-atendimento' })}
+                onClick={() => updatePatient(p.id, { status: 'EM_ATENDIMENTO' })}
                 className="text-green-700 hover:underline text-sm mt-1"
               >
                 Abrir Prontuário

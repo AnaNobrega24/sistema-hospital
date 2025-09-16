@@ -10,12 +10,12 @@ export async function postApi(route,payload, options = {}) {
   return data;
 }
 
-export async function updateApi(route, id, payload) {
-  const { data } = await api.patch(`/${route}/${id}`, payload);
+export async function updateApi(route, payload, options = {}) {
+  const { data } = await api.patch(`/${route}`, payload, options);
   return data;
 }
 
-export async function deleteApi(route,id) {
-  const { data } = await api.delete(`/${route}/${id}`);
+export async function deleteApi(route,id, options = {}) {
+  const { data } = await api.delete(`/${route}/${id}`, options);
   return data;
 }

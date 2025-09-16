@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { getPriorityByReason } from "../utils/triagem";
-import { getApi, postApi } from "../services/apiServices";
+import { getApi, postApi, updateApi } from "../services/apiServices";
 import { useLocation } from "react-router-dom";
 
 export default function Triagem() {
@@ -17,9 +17,9 @@ export default function Triagem() {
   // })
   const [selectedId, setSelectedId] = useState(null);
   const location = useLocation();
-  const token = localStorage.getItem("token");
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
     const load = async () => {
       const data = await getApi("pacientes/triagem", {
         headers: {
@@ -31,16 +31,17 @@ export default function Triagem() {
     load();
     window.addEventListener("patientsChanged", load);
     return () => window.removeEventListener("patientsChanged", load);
-  }, [location.pathname, token]);
+  }, [location.pathname]);
 
-  const updatePatient = async(id, changes) => {
+  const updatePatient = async (id, changes) => {
+    const token = localStorage.getItem("token");
     const updated = patients.map((p) =>
       p.id === id ? { ...p, ...changes } : p
     );
-    
+
     setPatients(updated);
 
-    const infosPaciente = updated.filter((p) => p.id === id )
+    const infosPaciente = updated.filter((p) => p.id === id);
     const pacienteTriado = {
       pacienteId: infosPaciente[0].id,
       temperatura: infosPaciente[0].temperatura,
@@ -51,31 +52,43 @@ export default function Triagem() {
       notas: infosPaciente[0].notas,
       motivo: infosPaciente[0].motivo,
       prioridade: infosPaciente[0].prioridade,
-      completedAt: new Date().toISOString()
-    }
+      completedAt: new Date().toISOString(),
+    };
+
+    const paciente = updated.find((p) => p.id === id)
+      const status = {
+        status: paciente.status}
+    console.log(status);
     
+
+    await updateApi(`pacientes/${id}/status`, status, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
     await postApi("pacientes/triagem", pacienteTriado, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        },
-      } )
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
     window.dispatchEvent(new Event("patientsChanged"));
   };
 
-  const handleFieldChange = (id, field, value) => {    
+  const handleFieldChange = (id, field, value) => {
     setPatients((prev) =>
       prev.map((p) => (p.id === id ? { ...p, [field]: value } : p))
     );
   };
 
   const handleEnviarParaMedico = (id) => {
-    const patient = patients.find((p) => p.id === id); 
+    const patient = patients.find((p) => p.id === id);
     updatePatient(id, {
       ...patient,
-      status: "AGUARDANDO"
+      status: "AGUARDANDO",
     });
-    
-    
+
     setSelectedId(null);
   };
 

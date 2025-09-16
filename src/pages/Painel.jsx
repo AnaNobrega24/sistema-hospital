@@ -3,9 +3,10 @@ import { getApi } from "../services/apiServices";
 
 export default function Painel() {
   const [patients, setPatients] = useState([]);
-  const token = localStorage.getItem("token")
+  
 
   useEffect(() => {
+    const token = localStorage.getItem("token")
     const load = async () => {
       const data = await getApi("pacientes/fila", {
         headers: {
@@ -18,12 +19,12 @@ export default function Painel() {
 
     window.addEventListener("patientsChanged", load);
     return () => window.removeEventListener("patientsChanged", load);
-  }, [patients, token]);
+  }, []);
 
-  const emAtendimento = patients.find((p) => p.status === "em-atendimento");
-
+  const emAtendimento = patients.find((p) => p.status === "EM_ATENDIMENTO");
+  
   const fila = patients
-    .filter((p) => p.status === "aguardando-atendimento")
+    .filter((p) => p.status === "AGUARDANDO")
     .sort((a, b) => {
       const order = { alta: 3, media: 2, baixa: 1 };
       if (order[b.priority] !== order[a.priority])
@@ -33,11 +34,11 @@ export default function Painel() {
 
   const renderPriority = (priority) => {
     switch (priority) {
-      case "alta":
+      case "ALTA":
         return "🔴 Vermelho (Alta)";
-      case "media":
+      case "MEDIA":
         return "🟡 Amarelo (Média)";
-      case "baixa":
+      case "BAIXA":
         return "🟢 Verde (Baixa)";
       default:
         return "⚪️ Não definida";
@@ -57,10 +58,10 @@ export default function Painel() {
             🩺 Paciente em Atendimento:
           </p>
           <p className="text-xl font-bold text-hospital-blue">
-            {emAtendimento.name}
+            {emAtendimento.nome}
           </p>
           <p className="text-sm text-gray-600">
-            Classificação: {renderPriority(emAtendimento.priority)}
+            Classificação: {renderPriority(emAtendimento.triage.prioridade)}
           </p>
         </div>
       ) : (
@@ -83,9 +84,9 @@ export default function Painel() {
               className="p-3 bg-gray-50 rounded border-l-4 border-hospital-blue flex justify-between items-center"
             >
               <div>
-                <strong>{p.name}</strong>
+                <strong>{p.nome}</strong>
                 <div className="text-sm text-gray-600">
-                  {renderPriority(p.priority)}
+                  {renderPriority(p.triage.prioridade)}
                 </div>
               </div>
               <span className="text-sm text-gray-500">{i + 1}º na fila</span>

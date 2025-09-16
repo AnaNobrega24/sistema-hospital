@@ -1,52 +1,147 @@
-import React from 'react'
-import { HiBuildingOffice } from 'react-icons/hi2'
+import React from "react";
+import {
+  FaHospital,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaEnvelope,
+  FaLink,
+  FaShieldAlt,
+  FaFileContract,
+  FaHeadset,
+  FaQuestionCircle,
+  FaCode,
+  FaUserCircle,
+  FaHeart,
+} from "react-icons/fa";
 
 export default function Footer() {
+  const currentYear = new Date().getFullYear();
+
+  const developers = [
+    { name: "Ana Nóbrega", role: "Frontend Developer" },
+    { name: "Mickael Maciel", role: "Full Stack Developer" },
+    { name: "Gabriel das Chagas Albuquerque", role: "Full Stack Developer" },
+  ];
+
+  const usefulLinks = [
+    { name: "Política de Privacidade", icon: <FaShieldAlt /> },
+    { name: "Termos de Uso", icon: <FaFileContract /> },
+    { name: "Suporte Técnico", icon: <FaHeadset /> },
+    { name: "FAQ", icon: <FaQuestionCircle /> },
+    { name: "Contato", icon: <FaEnvelope /> },
+  ];
+
   return (
-    <footer className="bg-[#2c3e50] text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Logo e informações */}
-        <div className="space-y-3">
-          <div className="flex items-center space-x-2">
-            <h4 className="text-lg font-semibold">Hospital AlphaMed</h4>
+    <footer className="relative text-white">
+      {/* Gradiente animado */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#59995c] via-[#4a8049] to-[#5ea361] animate-[shimmer_3s_infinite] pointer-events-none"></div>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Hospital Info */}
+        <div className="backdrop-blur-md bg-white/10 rounded-lg p-6 shadow-lg space-y-6">
+          <div className="flex items-center space-x-3">
+            <div className="h-10 w-10 bg-gradient-to-br from-[#59995c] to-[#7cb342] rounded-lg flex items-center justify-center shadow-lg">
+              <FaHospital className="text-white text-xl" />
+            </div>
+            <div>
+              <div className="font-bold text-lg">Hospital AlphaMed</div>
+              <div className="text-xs text-white/70">
+                Sistema de Gestão Hospitalar
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-white/80">
-            Av. Saúde, 123<br/>Fortaleza, CE
-          </p>
-          <p className="text-sm text-white/80">Telefone: (85) 99999-9999</p>
+
+          <div className="space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 bg-gradient-to-br from-[#59995c] to-[#7cb342] w-8 h-8 rounded-lg flex items-center justify-center">
+                <FaMapMarkerAlt />
+              </div>
+              <div>
+                <div className="font-semibold">Localização</div>
+                <div className="text-sm text-white/80">
+                  Av. Saúde, 123
+                  <br />
+                  Fortaleza, CE
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 bg-gradient-to-br from-[#59995c] to-[#7cb342] w-8 h-8 rounded-lg flex items-center justify-center">
+                <FaPhone />
+              </div>
+              <div>
+                <div className="font-semibold">Telefone</div>
+                <div className="text-sm text-white/80">(85) 99999-9999</div>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 bg-gradient-to-br from-[#59995c] to-[#7cb342] w-8 h-8 rounded-lg flex items-center justify-center">
+                <FaEnvelope />
+              </div>
+              <div>
+                <div className="font-semibold">E-mail</div>
+                <div className="text-sm text-white/80">
+                  contato@alphamed.com
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Links úteis */}
-        <div className="space-y-3">
-          <h4 className="text-lg font-semibold border-l-4 border-[#27ae60] pl-2 uppercase">
+        {/* Links Úteis */}
+        <div className="backdrop-blur-md bg-white/10 rounded-lg p-6 shadow-lg space-y-4">
+          <h4 className="flex items-center text-lg font-bold mb-4">
+            <div className="mr-3 w-8 h-8 flex items-center justify-center bg-gradient-to-br from-[#59995c] to-[#7cb342] rounded-lg">
+              <FaLink />
+            </div>
             Links Úteis
           </h4>
-          <ul className="space-y-1">
-            <li><a href="#" className="text-sm hover:text-[#27ae60]">Política de Privacidade</a></li>
-            <li><a href="#" className="text-sm hover:text-[#27ae60]">Termos de Uso</a></li>
-            <li><a href="#" className="text-sm hover:text-[#27ae60]">Contato</a></li>
-          </ul>
+          <div className="space-y-2">
+            {usefulLinks.map((link, idx) => (
+              <a
+                key={idx}
+                href="#"
+                className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-white/10 transition-all duration-200"
+              >
+                <div>{link.icon}</div>
+                <span>{link.name}</span>
+              </a>
+            ))}
+          </div>
         </div>
 
         {/* Desenvolvedores */}
-        <div className="space-y-3">
-          <h4 className="text-lg font-semibold border-l-4 border-[#27ae60] pl-2 uppercase">
+        <div className="backdrop-blur-md bg-white/10 rounded-lg p-6 shadow-lg space-y-4">
+          <h4 className="flex items-center text-lg font-bold mb-4">
+            <div className="mr-3 w-8 h-8 flex items-center justify-center bg-gradient-to-br from-[#59995c] to-[#7cb342] rounded-lg">
+              <FaCode />
+            </div>
             Desenvolvedores
           </h4>
-          <ul className="space-y-1 text-sm text-white/80">
-            <li>Ana Nóbrega</li>
-            <li>Lorena Rodrigues</li>
-            <li>Maurício Gonçalves</li>
-            <li>Vladimir Lima</li>
-          </ul>
+          <div className="space-y-3">
+            {developers.map((dev, idx) => (
+              <div
+                key={idx}
+                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/10 transition-all duration-200"
+              >
+                <FaUserCircle className="text-xl" />
+                <div>
+                  <div className="font-semibold">{dev.name}</div>
+                  <div className="text-xs text-white/70">{dev.role}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="bg-[#1e2a35]">
-        <p className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 text-center text-xs text-white/60">
-          &copy; {new Date().getFullYear()} Hospital AlphaMed. Todos os direitos reservados.
-        </p>
+      {/* Copyright */}
+      <div className="relative z-10 backdrop-blur-md bg-white/10 border-t border-white/20 py-4 mt-8 text-center text-white/80">
+        &copy; {currentYear} Hospital AlphaMed. Todos os direitos reservados.
+        Feito com <FaHeart className="inline text-red-400 mx-1" /> e dedicação
       </div>
     </footer>
-  )
+  );
 }

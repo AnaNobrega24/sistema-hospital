@@ -1,62 +1,183 @@
-// src/pages/Relatorios.jsx
-import React, { useState, useEffect } from 'react';
-import { mockRelatoriosData } from '../data/mockRelatorios';
-import StatCard from '../components/relatorios/StatCard';
-import GraficoAtendimentos from '../components/relatorios/GraficoAtendimentos';
-import Spinner from '../components/Spinner'; // 1. IMPORTE O SPINNER
+import React, { useEffect, useState } from "react";
+import { FaStethoscope, FaUserInjured, FaUserMd, FaChartLine } from "react-icons/fa";
+import { Bar, Line } from "react-chartjs-2";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from "chart.js";
+import Spinner from "../components/Spinner";
+import StatCard from "../components/relatorios/StatCard";
+
+// Registrar módulos do Chart.js
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 export default function Relatorios() {
-  const [estatisticas, setEstatisticas] = useState(null); // Inicia como nulo
-  const [loading, setLoading] = useState(true); // 2. CRIE O ESTADO DE CARREGAMENTO
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState(null);
 
-  // 3. Simula a busca de dados
+  // Simula fetch de dados
   useEffect(() => {
-    setLoading(true);
-    setTimeout(() => {
-      setEstatisticas(mockRelatoriosData);
+    const timeout = setTimeout(() => {
+      setData({
+        estatisticas: {
+          atendimentos: 1240,
+          pacientes: 890,
+          medicos: 32,
+          mediaAtendimentos: 42,
+        },
+        graficoAtendimentos: {
+          labels: [
+            "Jan",
+            "Fev",
+            "Mar",
+            "Abr",
+            "Mai",
+            "Jun",
+            "Jul",
+            "Ago",
+            "Set",
+            "Out",
+            "Nov",
+            "Dez",
+          ],
+          dados: [120, 150, 180, 200, 170, 190, 220, 210, 230, 250, 270, 300],
+        },
+        graficoPacientes: {
+          labels: ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"],
+          dados: [50, 70, 65, 80, 90, 40, 30],
+        },
+      });
       setLoading(false);
-    }, 1500); // Simula 1.5 segundos de atraso
+    }, 1500);
+
+    return () => clearTimeout(timeout);
   }, []);
 
-  // 4. Se estiver carregando, mostra o Spinner
+  const handleRefresh = () => {
+    setLoading(true);
+    setTimeout(() => {
+      // Aqui poderia chamar API real
+      setLoading(false);
+    }, 1000);
+  };
+
   if (loading) {
-    return <Spinner />;
-  }
-  
-  // Se não houver estatísticas (após o carregamento), mostra uma mensagem
-  if (!estatisticas) {
-    return <p className="text-center text-gray-500">Não foi possível carregar as estatísticas.</p>
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-50">
+        <Spinner />
+      </div>
+    );
   }
 
-  // 5. Se os dados chegaram, mostra o dashboard
   return (
-    <div className="max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Dashboard de Relatórios</h2>
-
-      {/* Cards de Destaque */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <StatCard
-          titulo="Tempo Médio de Espera"
-          valor={estatisticas.tempoMedioEsperaMin}
-          unidade="min"
-        />
-        {/* Você pode adicionar outros StatCards aqui */}
+    <div className="p-8 bg-gray-50 min-h-screen">
+      {/* Cabeçalho */}
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-gray-800">Relatórios</h1>
+        <button
+          onClick={handleRefresh}
+          className="flex items-center px-4 py-2 bg-[#59995c] text-white rounded-lg shadow-md hover:bg-[#4a8049] transition"
+        >
+          <i className="fas fa-sync-alt mr-2"></i> Atualizar
+        </button>
       </div>
 
+     {/* Estatísticas */}
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+  <StatCard
+    title="Atendimentos"
+    value={data.estatisticas.atendimentos}
+    Icon={FaStethoscope} // ícone do estetoscópio
+    color="#3b82f6" // azul
+  />
+  <StatCard
+    title="Pacientes"
+    value={data.estatisticas.pacientes}
+    Icon={FaUserInjured} // ícone de paciente
+    color="#10b981" // verde
+  />
+  <StatCard
+    title="Médicos"
+    value={data.estatisticas.medicos}
+    Icon={FaUserMd} // ícone de médico
+    color="#8b5cf6" // roxo
+  />
+  <StatCard
+    title="Média Diária"
+    value={data.estatisticas.mediaAtendimentos}
+    Icon={FaChartLine} // ícone de gráfico
+    color="#f97316" // laranja
+  />
+</div>
+
+
       {/* Gráficos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <GraficoAtendimentos
-          titulo="Atendimentos por Médico"
-          dados={estatisticas.pacientesPorMedico}
-          chaveNome="nomeMedico"
-          chaveValor="total"
-        />
-        <GraficoAtendimentos
-          titulo="Pacientes por Prioridade"
-          dados={estatisticas.pacientesPorPrioridade}
-          chaveNome="prioridade"
-          chaveValor="total"
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Atendimentos por mês */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">Atendimentos por Mês</h2>
+          <Bar
+            data={{
+              labels: data.graficoAtendimentos.labels,
+              datasets: [
+                {
+                  label: "Atendimentos",
+                  data: data.graficoAtendimentos.dados,
+                  backgroundColor: "rgba(89, 153, 92, 0.7)",
+                  borderRadius: 6,
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: { display: false },
+              },
+            }}
+          />
+        </div>
+
+        {/* Pacientes por semana */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-xl font-semibold mb-4">Pacientes por Semana</h2>
+          <Line
+            data={{
+              labels: data.graficoPacientes.labels,
+              datasets: [
+                {
+                  label: "Pacientes",
+                  data: data.graficoPacientes.dados,
+                  borderColor: "#59995c",
+                  backgroundColor: "rgba(89, 153, 92, 0.3)",
+                  fill: true,
+                  tension: 0.4,
+                },
+              ],
+            }}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: { display: false },
+              },
+            }}
+          />
+        </div>
       </div>
     </div>
   );

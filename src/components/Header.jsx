@@ -70,9 +70,6 @@ export default function Header() {
               <i className="fas fa-history mr-2"></i>Histórico
             </NavLink>
           )}
-          <NavLink to="/registro" className={linkCls}>
-            <i className="fas fa-clipboard-list mr-2"></i>Registro
-          </NavLink>
         </nav>
 
         {/* Hora + Admin */}
@@ -100,7 +97,9 @@ export default function Header() {
               </div>
               <div className="hidden sm:block text-left">
                 <div className="text-xs opacity-75">Bem-vindo</div>
-                <div className="font-semibold">{user ? user.nome : "Admin"}</div>
+                <div className="font-semibold">
+                  {user ? user.nome : "Admin"}
+                </div>
               </div>
               <i
                 className={`fas fa-chevron-down text-xs transition-transform duration-200 ${
@@ -110,36 +109,66 @@ export default function Header() {
             </button>
 
             {dropdownOpen && (
-  <div className="absolute right-0 mt-2 w-48 rounded-xl shadow-2xl border border-white/10 overflow-hidden">
-    {/* Gradiente animado de fundo */}
-    <div className="absolute inset-0 bg-gradient-to-br from-[#59995c] via-[#4a8049] to-[#5ea361] animate-[shimmer_3s_infinite] pointer-events-none rounded-xl"></div>
+              <div className="absolute right-0 mt-2 w-56 rounded-xl shadow-2xl border border-white/10 overflow-hidden">
+                {/* Gradiente animado de fundo */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#59995c] via-[#4a8049] to-[#5ea361] animate-[shimmer_3s_infinite] pointer-events-none rounded-xl"></div>
 
-    {/* Conteúdo do dropdown com backdrop */}
-    <div className="relative backdrop-blur-md bg-white/10 z-10">
-      <div className="p-4 border-b border-white/10 flex items-center space-x-3">
-        <div className="h-12 w-12 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center">
-          <HiUserCircle className="text-white text-lg" />
-        </div>
-        <div>
-          <div className="font-semibold text-white">
-            {user ? user.nome : "Dr. Admin"}
-          </div>
-          <div className="text-xs text-white/60">Administrador</div>
-        </div>
-      </div>
-      <div className="p-3">
-        <button
-          onClick={handleLogout}
-          className="w-full flex items-center justify-center space-x-3 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
-        >
-          <i className="fas fa-sign-out-alt text-lg"></i>
-          <span className="font-medium">Sair do Sistema</span>
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                {/* Conteúdo do dropdown com backdrop */}
+                <div className="relative backdrop-blur-md bg-white/10 z-10">
+                  {/* Info usuário */}
+                  <div className="p-4 border-b border-white/10 flex items-center space-x-3">
+                    <div className="h-12 w-12 bg-gradient-to-br from-white/20 to-white/10 rounded-full flex items-center justify-center">
+                      <HiUserCircle className="text-white text-lg" />
+                    </div>
+                    <div>
+                      <div className="font-semibold text-white">
+                        {user ? user.nome : "Dr. Admin"}
+                      </div>
+                      <div className="text-xs text-white/60">Administrador</div>
+                    </div>
+                  </div>
 
+                  {/* Opções */}
+                  <div className="p-2 flex flex-col space-y-2">
+                    <NavLink
+                      to="/relatorios"
+                      className="flex items-center space-x-3 px-4 py-2 rounded-lg text-white/90 
+             bg-white/20 hover:bg-white/30 
+             transition shadow-md hover:shadow-lg"
+                    >
+                      <i className="fas fa-clipboard-list"></i>
+                      <span>Relatorios</span>
+                    </NavLink>
+                    <NavLink
+                      to="/historico"
+                      className="flex items-center space-x-3 px-4 py-2 rounded-lg text-white/90 
+             bg-white/20 hover:bg-white/30 
+             transition shadow-md hover:shadow-lg"
+                    >
+                      <i className="fas fa-clipboard-list"></i>
+                      <span>Historico</span>
+                    </NavLink>
+                    <NavLink
+                      to="/historico"
+                      className="flex items-center space-x-3 px-4 py-2 rounded-lg text-white/90 
+             bg-white/20 hover:bg-white/30 
+             transition shadow-md hover:shadow-lg"
+                    >
+                      <i className="fas fa-clipboard-list"></i>
+                      <span>Registro</span>
+                    </NavLink>
+
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center justify-center space-x-3 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-lg transition-all duration-200 transform hover:scale-105 shadow-lg"
+                    >
+                      <i className="fas fa-sign-out-alt text-lg"></i>
+                      <span className="font-medium">Sair do Sistema</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Menu Mobile */}

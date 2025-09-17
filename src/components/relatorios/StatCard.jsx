@@ -1,14 +1,18 @@
-// src/components/relatorios/StatCard.jsx
-import React from 'react';
+import React from "react";
 
-// Um card simples para mostrar um número em destaque.
-export default function StatCard({ titulo, valor, unidade }) {
+export default function StatCard({ title, value, Icon, color }) {
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md text-center">
-      <h3 className="text-gray-500 text-sm font-medium uppercase">{titulo}</h3>
-      <p className="text-3xl font-bold text-[#2c3e50] mt-2">
-        {valor} <span className="text-lg font-normal">{unidade}</span>
-      </p>
+    <div className="bg-white p-6 rounded-xl shadow-lg flex items-center space-x-4 hover:shadow-xl transition">
+      <div
+        className={`h-12 w-12 flex items-center justify-center rounded-full shadow text-white`}
+        style={{ backgroundColor: color }}
+      >
+        <Icon className="text-xl" />
+      </div>
+      <div>
+        <h3 className="text-gray-600 text-sm">{title}</h3>
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+      </div>
     </div>
   );
 }

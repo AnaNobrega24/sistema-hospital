@@ -1,9 +1,25 @@
 import React, { useState, useMemo } from "react";
-import { FaUser, FaEnvelope, FaLock, FaHeadset, FaUserMd, FaCheck } from "react-icons/fa";
+
+import {
+  FaUser,
+  FaEnvelope,
+  FaLock,
+  FaHeadset,
+  FaUserMd,
+  FaCheck,
+} from "react-icons/fa";
 import { postApi } from "../services/apiServices";
 
 // Componente reutilizável para input com ícone e label
-function InputWithIcon({ label, icon: Icon, value, onChange, placeholder, type = "text", validation }) {
+function InputWithIcon({
+  label,
+  icon: Icon,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  validation,
+}) {
   const borderColor =
     validation === true
       ? "border-green-300"
@@ -47,17 +63,23 @@ export default function Registro() {
     especialidade: null,
   });
 
-  const validateEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").toLowerCase());
+  const validateEmail = (v) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").toLowerCase());
 
   const checkPasswordStrength = (pwd) => {
     let score = 0;
     const missing = [];
     if (!pwd) return { score, level: null, feedback: [] };
-    if (pwd.length >= 8) score++; else missing.push("mín. 8 caracteres");
-    if (/[a-z]/.test(pwd)) score++; else missing.push("minúscula");
-    if (/[A-Z]/.test(pwd)) score++; else missing.push("MAIÚSCULA");
-    if (/[0-9]/.test(pwd)) score++; else missing.push("número");
-    if (/[^A-Za-z0-9]/.test(pwd)) score++; else missing.push("símbolo");
+    if (pwd.length >= 8) score++;
+    else missing.push("mín. 8 caracteres");
+    if (/[a-z]/.test(pwd)) score++;
+    else missing.push("minúscula");
+    if (/[A-Z]/.test(pwd)) score++;
+    else missing.push("MAIÚSCULA");
+    if (/[0-9]/.test(pwd)) score++;
+    else missing.push("número");
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    else missing.push("símbolo");
 
     const level = score <= 2 ? "weak" : score <= 4 ? "medium" : "strong";
     return { score, level, feedback: missing };
@@ -65,8 +87,10 @@ export default function Registro() {
 
   const passwordClass = useMemo(() => {
     if (!pwdInfo.level) return "";
-    if (pwdInfo.level === "weak") return "bg-red-50 border-red-200 text-red-700";
-    if (pwdInfo.level === "medium") return "bg-yellow-50 border-yellow-200 text-yellow-700";
+    if (pwdInfo.level === "weak")
+      return "bg-red-50 border-red-200 text-red-700";
+    if (pwdInfo.level === "medium")
+      return "bg-yellow-50 border-yellow-200 text-yellow-700";
     return "bg-green-50 border-green-200 text-green-700";
   }, [pwdInfo]);
 
@@ -74,9 +98,12 @@ export default function Registro() {
     setForm((p) => ({ ...p, [name]: value }));
 
     // Validação em tempo real
-    if (name === "nome") setValidation((v) => ({ ...v, nome: value.trim().length >= 2 }));
-    if (name === "email") setValidation((v) => ({ ...v, email: validateEmail(value) }));
-    if (name === "especialidade") setValidation((v) => ({ ...v, especialidade: value.trim().length > 1 }));
+    if (name === "nome")
+      setValidation((v) => ({ ...v, nome: value.trim().length >= 2 }));
+    if (name === "email")
+      setValidation((v) => ({ ...v, email: validateEmail(value) }));
+    if (name === "especialidade")
+      setValidation((v) => ({ ...v, especialidade: value.trim().length > 1 }));
     if (name === "senha") {
       const info = checkPasswordStrength(value);
       setPwdInfo(info);
@@ -85,18 +112,27 @@ export default function Registro() {
   }
 
   function selectRole(role) {
-    setForm((p) => ({ ...p, role, especialidade: role === "MEDICO" ? p.especialidade : "" }));
-    if (role !== "MEDICO") setValidation((v) => ({ ...v, especialidade: null }));
+    setForm((p) => ({
+      ...p,
+      role,
+      especialidade: role === "MEDICO" ? p.especialidade : "",
+    }));
+    if (role !== "MEDICO")
+      setValidation((v) => ({ ...v, especialidade: null }));
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     // Validações básicas
-    if (!form.nome || form.nome.trim().length < 2) return alert("Nome inválido");
+    if (!form.nome || form.nome.trim().length < 2)
+      return alert("Nome inválido");
     if (!validateEmail(form.email)) return alert("Email inválido");
     const pwd = checkPasswordStrength(form.senha);
     if (pwd.level === "weak" || !pwd.level) return alert("Senha muito fraca");
-    if (form.role === "MEDICO" && (!form.especialidade || form.especialidade.trim().length < 2))
+    if (
+      form.role === "MEDICO" &&
+      (!form.especialidade || form.especialidade.trim().length < 2)
+    )
       return alert("Especialidade obrigatória para Médicos");
 
     setSubmitting(true);
@@ -110,9 +146,20 @@ export default function Registro() {
       };
       await postApi("auth/register", payload);
       alert("Usuário registrado com sucesso");
-      setForm({ nome: "", email: "", senha: "", role: "ATENDENTE", especialidade: "" });
+      setForm({
+        nome: "",
+        email: "",
+        senha: "",
+        role: "ATENDENTE",
+        especialidade: "",
+      });
       setPwdInfo({ level: null, feedback: [] });
-      setValidation({ nome: null, email: null, senha: null, especialidade: null });
+      setValidation({
+        nome: null,
+        email: null,
+        senha: null,
+        especialidade: null,
+      });
     } catch (err) {
       console.error(err);
       alert("Erro ao registrar usuário");
@@ -125,11 +172,18 @@ export default function Registro() {
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-extrabold text-[#2f6f3d]">Registro de Usuário</h1>
-          <p className="text-gray-500">Cadastre novos profissionais no sistema hospitalar</p>
+          <h1 className="text-3xl font-extrabold text-[#2f6f3d]">
+            Registro de Usuário
+          </h1>
+          <p className="text-gray-500">
+            Cadastre novos profissionais no sistema hospitalar
+          </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-6 relative">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-2xl shadow p-6 relative"
+        >
           <div className="absolute left-6 right-6 -top-3 h-1 rounded-full bg-gradient-to-r from-[#59995c] to-[#4a8049]" />
 
           {/* Informações Pessoais */}
@@ -138,7 +192,9 @@ export default function Registro() {
               <div className="w-10 h-10 rounded-md bg-[#2f6f3d] text-white flex items-center justify-center">
                 <FaUser />
               </div>
-              <h3 className="font-semibold text-sm uppercase text-gray-700">Informações Pessoais</h3>
+              <h3 className="font-semibold text-sm uppercase text-gray-700">
+                Informações Pessoais
+              </h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -167,7 +223,9 @@ export default function Registro() {
               <div className="w-10 h-10 rounded-md bg-[#2f6f3d] text-white flex items-center justify-center">
                 <FaLock />
               </div>
-              <h3 className="font-semibold text-sm uppercase text-gray-700">Configurações de Segurança</h3>
+              <h3 className="font-semibold text-sm uppercase text-gray-700">
+                Configurações de Segurança
+              </h3>
             </div>
 
             <InputWithIcon
@@ -181,14 +239,24 @@ export default function Registro() {
             />
 
             {pwdInfo.level && (
-              <div className={`mt-3 text-sm rounded-md border px-3 py-2 ${passwordClass}`}>
+              <div
+                className={`mt-3 text-sm rounded-md border px-3 py-2 ${passwordClass}`}
+              >
                 {pwdInfo.level === "strong" && (
                   <span className="inline-flex items-center gap-2 text-green-700">
                     <FaCheck /> Senha forte
                   </span>
                 )}
-                {pwdInfo.level === "medium" && <span>Senha média — melhorar: {pwdInfo.feedback.join(", ")}</span>}
-                {pwdInfo.level === "weak" && <span>Senha fraca — faltam: {pwdInfo.feedback.join(", ")}</span>}
+                {pwdInfo.level === "medium" && (
+                  <span>
+                    Senha média — melhorar: {pwdInfo.feedback.join(", ")}
+                  </span>
+                )}
+                {pwdInfo.level === "weak" && (
+                  <span>
+                    Senha fraca — faltam: {pwdInfo.feedback.join(", ")}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -199,7 +267,9 @@ export default function Registro() {
               <div className="w-10 h-10 rounded-md bg-[#2f6f3d] text-white flex items-center justify-center">
                 <FaUserMd />
               </div>
-              <h3 className="font-semibold text-sm uppercase text-gray-700">Perfil Profissional</h3>
+              <h3 className="font-semibold text-sm uppercase text-gray-700">
+                Perfil Profissional
+              </h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -217,16 +287,24 @@ export default function Registro() {
                 </div>
                 <div className="flex-1">
                   <div className="font-semibold">Atendente</div>
-                  <div className="text-xs text-gray-500">Cadastro de pacientes, agendamentos e atendimento inicial.</div>
+                  <div className="text-xs text-gray-500">
+                    Cadastro de pacientes, agendamentos e atendimento inicial.
+                  </div>
                 </div>
-                {form.role === "ATENDENTE" && <div className="text-green-600"><FaCheck /></div>}
+                {form.role === "ATENDENTE" && (
+                  <div className="text-green-600">
+                    <FaCheck />
+                  </div>
+                )}
               </button>
 
               <button
                 type="button"
                 onClick={() => selectRole("MEDICO")}
                 className={`flex items-center gap-3 p-4 rounded-lg border text-left transition ${
-                  form.role === "MEDICO" ? "bg-green-50 border-green-200 shadow-sm" : "bg-white border-gray-200"
+                  form.role === "MEDICO"
+                    ? "bg-green-50 border-green-200 shadow-sm"
+                    : "bg-white border-gray-200"
                 }`}
               >
                 <div className="w-10 h-10 rounded-full bg-[#2f6f3d] text-white flex items-center justify-center">
@@ -234,9 +312,16 @@ export default function Registro() {
                 </div>
                 <div className="flex-1">
                   <div className="font-semibold">Médico</div>
-                  <div className="text-xs text-gray-500">Profissional responsável por consultas, diagnósticos e prescrições.</div>
+                  <div className="text-xs text-gray-500">
+                    Profissional responsável por consultas, diagnósticos e
+                    prescrições.
+                  </div>
                 </div>
-                {form.role === "MEDICO" && <div className="text-green-600"><FaCheck /></div>}
+                {form.role === "MEDICO" && (
+                  <div className="text-green-600">
+                    <FaCheck />
+                  </div>
+                )}
               </button>
             </div>
 
@@ -260,8 +345,22 @@ export default function Registro() {
             >
               {submitting ? (
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity="0.25" fill="none" />
-                  <path d="M22 12a10 10 0 0 1-10 10" stroke="white" strokeWidth="3" strokeLinecap="round" fill="none" />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="white"
+                    strokeWidth="3"
+                    strokeOpacity="0.25"
+                    fill="none"
+                  />
+                  <path
+                    d="M22 12a10 10 0 0 1-10 10"
+                    stroke="white"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    fill="none"
+                  />
                 </svg>
               ) : (
                 <FaUser className="text-white" />

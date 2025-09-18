@@ -38,6 +38,7 @@ export default function Medico() {
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [atendimento, setAtendimento] = useState({});
 
   // paciente em atendimento
   const current = useMemo(
@@ -66,43 +67,59 @@ export default function Medico() {
 
   const syncStatus = async (id, paciente) => {
     const token = localStorage.getItem("token");
+
     try {
       if (paciente.status) {
-        await updateApi(`pacientes/${id}/status`, { status: paciente.status }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await updateApi(
+          `pacientes/${id}/status`,
+          { status: paciente.status },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
       }
       if (paciente.status === "EM_ATENDIMENTO") {
-        await postApi("atendimento/iniciar", { pacienteId: id }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        await postApi(
+          "atendimentos/iniciar",
+          { pacienteId: id },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
       }
-      if (paciente.status === "CONCLUIDO" && paciente.atendimento) {
-        await postApi("atendimento/concluir", {
-          pacienteId: id,
-          atendimento: paciente.atendimento,
-        }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+      if (paciente.status === "CONCLUIDO" && paciente) {
+        await updateApi(
+          `atendimentos/finalizar/${atendimento.id}`,
+          {
+            pacienteId: id,
+            ...paciente,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
       }
-      window.dispatchEvent(new Event("patientsChanged"));
+      //window.dispatchEvent(new Event("patientsChanged"));
     } catch (err) {
       console.error("Erro sincronizando status:", err);
     }
   };
 
   const updatePatientLocal = (id, changes = {}) => {
-    setPatients((prev) => prev.map((p) => (p.id === id ? { ...p, ...changes } : p)));
+    setPatients((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, ...changes } : p))
+    );
   };
 
   const updatePatient = async (id, changes = {}) => {
     updatePatientLocal(id, changes);
     const paciente = patients.find((p) => p.id === id) || {};
     const merged = { ...paciente, ...changes };
-    await syncStatus(id, merged);
+    const res = await syncStatus(id, merged);
+    setAtendimento(res);
   };
 
-  const callNext = () => {
+  const callNext = async () => {
     const next = patients.find((p) => p.status === "AGUARDANDO");
     if (next) {
       setForm({});
@@ -121,12 +138,15 @@ export default function Medico() {
   };
 
   // open confirmation modal (shows brief summary)
-  const askConfirmConclude = () => {
+  const askConfirmConclude = async () => {
     if (!current) return;
     if (!form.sintomas || !form.cid10) {
       alert("Preencha pelo menos os sintomas e o CID-10 antes de concluir.");
       return;
     }
+
+    //syncStatus(current.id, current)
+
     setConfirmOpen(true);
   };
 
@@ -143,10 +163,7 @@ export default function Medico() {
       });
 
       // sync with backend (calls updatePatient which posts atendimento/concluir)
-      await syncStatus(current.id, {
-        status: "CONCLUIDO",
-        atendimento: { ...form },
-      });
+      await syncStatus(current.id, { status: "CONCLUIDO", ...form });
 
       // remove patient locally from list (optional — keeps history)
       setPatients((prev) => prev.filter((p) => p.id !== current.id));
@@ -178,14 +195,21 @@ export default function Medico() {
     <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-extrabold text-[#2f6f3d]">Atendimento Médico</h2>
-          <p className="text-gray-500">Consultas e acompanhamento de pacientes</p>
+          <h2 className="text-2xl font-extrabold text-[#2f6f3d]">
+            Atendimento Médico
+          </h2>
+          <p className="text-gray-500">
+            Consultas e acompanhamento de pacientes
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
           {/* Paciente em atendimento header (green) */}
           {current && (
-            <div className="rounded-lg overflow-hidden mb-6" style={{ background: "linear-gradient(90deg,#4f8f55,#609e60)" }}>
+            <div
+              className="rounded-lg overflow-hidden mb-6"
+              style={{ background: "linear-gradient(90deg,#4f8f55,#609e60)" }}
+            >
               <div className="p-4 text-white">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
@@ -193,29 +217,61 @@ export default function Medico() {
                       <FaUserMd />
                     </div>
                     <div>
-                      <div className="text-sm uppercase text-white/90 font-semibold">Paciente em Atendimento</div>
+                      <div className="text-sm uppercase text-white/90 font-semibold">
+                        Paciente em Atendimento
+                      </div>
                       <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-xxs text-white/80 uppercase">Nome do Paciente</div>
+                          <div className="text-xxs text-white/80 uppercase">
+                            Nome do Paciente
+                          </div>
                           <div className="font-semibold">{current.nome}</div>
                         </div>
                         <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-xxs text-white/80 uppercase">Motivo da Consulta</div>
-                          <div className="font-semibold">{current.triage?.motivo || "—"}</div>
+                          <div className="text-xxs text-white/80 uppercase">
+                            Motivo da Consulta
+                          </div>
+                          <div className="font-semibold">
+                            {current.triage?.motivo || "—"}
+                          </div>
                         </div>
                         <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-xxs text-white/80 uppercase">Temperatura</div>
-                          <div className="font-semibold">{current.triage?.temperatura || "—"}</div>
+                          <div className="text-xxs text-white/80 uppercase">
+                            Temperatura
+                          </div>
+                          <div className="font-semibold">
+                            {current.triage?.temperatura || "—"}
+                          </div>
                         </div>
                         <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-xxs text-white/80 uppercase">Pressão Arterial</div>
-                          <div className="font-semibold">{current.triage?.pressaoSanguinea || current.triage?.pressao || "—"}</div>
+                          <div className="text-xxs text-white/80 uppercase">
+                            Pressão Arterial
+                          </div>
+                          <div className="font-semibold">
+                            {current.triage?.pressaoSanguinea ||
+                              current.triage?.pressao ||
+                              "—"}
+                          </div>
                         </div>
                         <div className="bg-white/10 p-3 rounded text-xs flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${renderPriority(current.triage?.prioridade).color === "red" ? "bg-red-500" : renderPriority(current.triage?.prioridade).color === "yellow" ? "bg-yellow-400" : "bg-green-400"}`}></div>
+                          <div
+                            className={`w-3 h-3 rounded-full ${
+                              renderPriority(current.triage?.prioridade)
+                                .color === "red"
+                                ? "bg-red-500"
+                                : renderPriority(current.triage?.prioridade)
+                                    .color === "yellow"
+                                ? "bg-yellow-400"
+                                : "bg-green-400"
+                            }`}
+                          ></div>
                           <div>
-                            <div className="text-xxs text-white/80 uppercase">Classificação de Risco</div>
-                            <div className="font-semibold">{renderPriority(current.triage?.prioridade).label}</div>
+                            <div className="text-xxs text-white/80 uppercase">
+                              Classificação de Risco
+                            </div>
+                            <div className="font-semibold">
+                              {renderPriority(current.triage?.prioridade).label}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -223,8 +279,12 @@ export default function Medico() {
                   </div>
 
                   <div className="text-right text-sm">
-                    <div className="bg-white/20 px-3 py-1 rounded text-white/90">Status: EM ATENDIMENTO</div>
-                    <div className="text-white/90 text-xs mt-2 flex items-center gap-2"><FaClock /> {timeSince(current.createdAt)}</div>
+                    <div className="bg-white/20 px-3 py-1 rounded text-white/90">
+                      Status: EM ATENDIMENTO
+                    </div>
+                    <div className="text-white/90 text-xs mt-2 flex items-center gap-2">
+                      <FaClock /> {timeSince(current.createdAt)}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -236,7 +296,10 @@ export default function Medico() {
             <>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div className="bg-white rounded border p-4">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><FaExclamationCircle className="text-[#2f6f3d]" /> Sinais e Sintomas</h4>
+                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <FaExclamationCircle className="text-[#2f6f3d]" /> Sinais e
+                    Sintomas
+                  </h4>
                   <textarea
                     name="sintomas"
                     rows={5}
@@ -248,7 +311,9 @@ export default function Medico() {
                 </div>
 
                 <div className="bg-white rounded border p-4">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><FaFileMedical className="text-[#2f6f3d]" /> Diagnóstico</h4>
+                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <FaFileMedical className="text-[#2f6f3d]" /> Diagnóstico
+                  </h4>
 
                   <label className="text-xs text-gray-500">Código CID-10</label>
                   <input
@@ -259,7 +324,9 @@ export default function Medico() {
                     className="w-full border rounded p-2 mt-1 mb-3 text-sm"
                   />
 
-                  <label className="text-xs text-gray-500">Tipo de Atendimento</label>
+                  <label className="text-xs text-gray-500">
+                    Tipo de Atendimento
+                  </label>
                   <select
                     name="tipoAtendimento"
                     value={form.tipoAtendimento || ""}
@@ -267,14 +334,17 @@ export default function Medico() {
                     className="w-full border rounded p-2 mt-1 text-sm"
                   >
                     <option value="">Selecione o tipo</option>
-                    <option value="ambulatorial">Ambulatorial</option>
-                    <option value="urgencia">Urgência</option>
-                    <option value="internacao">Internação</option>
+                    <option value="AMBULATORIAL">Ambulatorial</option>
+                    <option value="URGENCIA">Urgência</option>
+                    <option value="INTERNACAO">Internação</option>
                   </select>
                 </div>
 
                 <div className="bg-white rounded border p-4">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><FaFileMedical className="text-[#2f6f3d]" /> Prescrição Médica</h4>
+                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <FaFileMedical className="text-[#2f6f3d]" /> Prescrição
+                    Médica
+                  </h4>
                   <textarea
                     name="prescricao"
                     rows={4}
@@ -286,7 +356,9 @@ export default function Medico() {
                 </div>
 
                 <div className="bg-white rounded border p-4">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2"><FaFileMedical className="text-[#2f6f3d]" /> Observações</h4>
+                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                    <FaFileMedical className="text-[#2f6f3d]" /> Observações
+                  </h4>
                   <textarea
                     name="observacoes"
                     rows={4}
@@ -317,31 +389,48 @@ export default function Medico() {
                   <FaUserMd /> Chamar Próximo
                 </button>
               ) : (
-                <div className="text-gray-500">Nenhum paciente aguardando na fila.</div>
+                <div className="text-gray-500">
+                  Nenhum paciente aguardando na fila.
+                </div>
               )}
             </div>
           )}
 
           {/* Fila de Espera */}
           <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-3"><FaFileMedical className="text-[#2f6f3d]" /> Fila de Espera <span className="ml-2 text-sm text-gray-500">({fila.length})</span></h3>
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-3">
+              <FaFileMedical className="text-[#2f6f3d]" /> Fila de Espera{" "}
+              <span className="ml-2 text-sm text-gray-500">
+                ({fila.length})
+              </span>
+            </h3>
 
             <ul className="space-y-4">
               {fila.map((p) => {
                 const priority = renderPriority(p.triage?.prioridade);
                 return (
-                  <li key={p.id} className="bg-white rounded border p-4 flex justify-between items-start">
+                  <li
+                    key={p.id}
+                    className="bg-white rounded border p-4 flex justify-between items-start"
+                  >
                     <div>
                       <div className="flex items-center gap-3">
                         <div>
                           <div className="font-semibold">{p.nome}</div>
-                          <div className="text-sm text-gray-600">{p.triage?.motivo || "Motivo não informado"}</div>
+                          <div className="text-sm text-gray-600">
+                            {p.triage?.motivo || "Motivo não informado"}
+                          </div>
                         </div>
-                        <div className={`ml-4 text-xs px-3 py-1 rounded-full text-${priority.color}-700 bg-${priority.color}-100`} />
+                        <div
+                          className={`ml-4 text-xs px-3 py-1 rounded-full text-${priority.color}-700 bg-${priority.color}-100`}
+                        />
                       </div>
 
                       <div className="mt-2 text-sm text-gray-500 flex items-center gap-3">
-                        <FaClock /> Aguardando há <span className="font-semibold">{timeSince(p.createdAt)}</span>
+                        <FaClock /> Aguardando há{" "}
+                        <span className="font-semibold">
+                          {timeSince(p.createdAt)}
+                        </span>
                       </div>
                     </div>
 
@@ -355,7 +444,9 @@ export default function Medico() {
                       </Link>
 
                       <button
-                        onClick={() => updatePatient(p.id, { status: "EM_ATENDIMENTO" })}
+                        onClick={() =>
+                          updatePatient(p.id, { status: "EM_ATENDIMENTO" })
+                        }
                         className="px-3 py-1 border rounded text-sm text-[#2f6f3d] hover:bg-green-50"
                       >
                         Chamar
@@ -364,7 +455,9 @@ export default function Medico() {
                   </li>
                 );
               })}
-              {fila.length === 0 && <li className="text-center text-gray-500 py-6">Fila vazia</li>}
+              {fila.length === 0 && (
+                <li className="text-center text-gray-500 py-6">Fila vazia</li>
+              )}
             </ul>
           </div>
         </div>
@@ -374,13 +467,25 @@ export default function Medico() {
       {confirmOpen && current && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-            <h3 className="text-lg font-semibold mb-3">Confirmar Conclusão do Atendimento</h3>
+            <h3 className="text-lg font-semibold mb-3">
+              Confirmar Conclusão do Atendimento
+            </h3>
 
             <div className="mb-4 text-sm text-gray-700">
-              <p><strong>Paciente:</strong> {current.nome}</p>
-              <p><strong>Motivo:</strong> {current.triage?.motivo || "—"}</p>
-              <p><strong>Prioridade:</strong> {renderPriority(current.triage?.prioridade).label}</p>
-              <p className="mt-2 text-xs text-gray-500">Ao confirmar, o atendimento será marcado como concluído e os dados serão enviados para o servidor.</p>
+              <p>
+                <strong>Paciente:</strong> {current.nome}
+              </p>
+              <p>
+                <strong>Motivo:</strong> {current.triage?.motivo || "—"}
+              </p>
+              <p>
+                <strong>Prioridade:</strong>{" "}
+                {renderPriority(current.triage?.prioridade).label}
+              </p>
+              <p className="mt-2 text-xs text-gray-500">
+                Ao confirmar, o atendimento será marcado como concluído e os
+                dados serão enviados para o servidor.
+              </p>
             </div>
 
             <div className="flex justify-end gap-3">
@@ -396,7 +501,13 @@ export default function Medico() {
                 disabled={loading}
                 className="px-4 py-2 rounded bg-[#2f6f3d] text-white flex items-center gap-2 hover:bg-[#285a30]"
               >
-                {loading ? "Confirmando..." : <><FaCheck /> Confirmar</>}
+                {loading ? (
+                  "Confirmando..."
+                ) : (
+                  <>
+                    <FaCheck /> Confirmar
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -1,6 +1,12 @@
-export function loadPatients() {
-  return JSON.parse(localStorage.getItem('patients')) || [];
+import { getApi, postApi } from "../services/apiServices";
+
+export async function loadPatients() {
+  const token = localStorage.getItem("token")
+  const response = await getApi("pacientes", {headers: {authorization: `Bearer ${token}`}})
+  return response
 }
-export function savePatients(patients) {
-  localStorage.setItem('patients', JSON.stringify(patients));
+export async function savePatients(patients) {
+  const token = localStorage.getItem("token")
+  const response = await postApi("pacientes", patients, {headers: {authorization: `Bearer ${token}`}})
+  return response
 }

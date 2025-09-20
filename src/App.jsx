@@ -15,27 +15,30 @@ import Registro from './pages/Registro'
 import Historico from './pages/Historico'
 import Relatorios from './pages/Relatorios'
 import './styles/App.css'
+import { AtendimentoProvider } from './context/AtendimentoContext'
 
 export default function App() {
   return (
-    <div className="flex flex-col min-h-screen">
-      <ToastContainer autoClose={3000} hideProgressBar />
-      <Header />
-      <main className="flex-grow bg-gray-50">
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/registro" element={<Registro />} />
-          <Route path="/historico" element={<Historico />} />
-          <Route path="/relatorios" element={<Relatorios />} />
-          <Route path="/" element={<Cadastro />} />
-          <Route path="/triagem" element={<Triagem />} />
-          <Route path="/medico" element={<Medico />} />
-          <Route path="/painel" element={<Painel />} />
-          <Route path="/ficha-paciente/:id" element={<FichaPaciente />} />
-          <Route path='/prontuario/:id' element={<Prontuario />} />
-        </Routes>
-      </main>
-      <Footer />
-    </div>
+    <AtendimentoProvider>
+      <div className="flex flex-col min-h-screen">
+        <ToastContainer autoClose={3000} hideProgressBar />
+        <Header />
+        <main className="flex-grow bg-gray-50">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Registro />} />
+            <Route path="/historico" element={<Historico />} />
+            <Route path="/relatorios" element={<Relatorios />} />
+            <Route path="/" element={<Cadastro />} />
+            <Route path="/triagem" element={<Triagem />} />
+            <Route path="/medico" element={<Medico />} />
+            <Route path="/painel" element={<Painel />} />
+            <Route path="/ficha-paciente/:id" element={<FichaPaciente />} />
+            <Route path='/prontuario/:id' element={<Prontuario />} />
+          </Routes>
+        </main>
+        <Footer />
+      </div>
+    </AtendimentoProvider>
   )
 }

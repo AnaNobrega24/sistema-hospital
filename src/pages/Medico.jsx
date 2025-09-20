@@ -10,6 +10,7 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { getApi, postApi, updateApi } from "../services/apiServices";
+import { useAtendimento } from "../context/AtendimentoContext";
 
 const renderPriority = (priority) => {
   switch (priority) {
@@ -34,7 +35,9 @@ function timeSince(createdAt) {
 }
 
 export default function Medico() {
-  const [patients, setPatients] = useState([]);
+  const user = useAtendimento();
+  const patients = user.patients;
+  //const [patients, setPatients] = useState([])
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -53,17 +56,19 @@ export default function Medico() {
         const data = await getApi("pacientes/fila", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        setPatients(Array.isArray(data) ? data : []);
+        user.setPatients(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Erro ao carregar pacientes:", err);
-        setPatients([]);
+        user.setPatients([]);
       }
     };
 
     load();
     window.addEventListener("patientsChanged", load);
     return () => window.removeEventListener("patientsChanged", load);
-  }, []);
+  }, [user]);
+
+  // Substitua a função syncStatus no Medico.jsx por esta versão:
 
   const syncStatus = async (id, paciente) => {
     const token = localStorage.getItem("token");
@@ -99,14 +104,16 @@ export default function Medico() {
           }
         );
       }
-      //window.dispatchEvent(new Event("patientsChanged"));
+
+      // IMPORTANTE: Dispara o evento para atualizar todos os componentes
+      window.dispatchEvent(new Event("patientsChanged"));
     } catch (err) {
       console.error("Erro sincronizando status:", err);
     }
   };
 
   const updatePatientLocal = (id, changes = {}) => {
-    setPatients((prev) =>
+    user.setPatients((prev) =>
       prev.map((p) => (p.id === id ? { ...p, ...changes } : p))
     );
   };
@@ -166,7 +173,7 @@ export default function Medico() {
       await syncStatus(current.id, { status: "CONCLUIDO", ...form });
 
       // remove patient locally from list (optional — keeps history)
-      setPatients((prev) => prev.filter((p) => p.id !== current.id));
+      user.setPatients((prev) => prev.filter((p) => p.id !== current.id));
       setForm({});
       setConfirmOpen(false);
 

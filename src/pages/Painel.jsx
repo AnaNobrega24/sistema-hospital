@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FaClock, FaUserMd, FaListOl } from "react-icons/fa";
-import { getApi } from "../services/apiServices";
+import { useAtendimento } from "../context/AtendimentoContext";
 
 function renderPriorityLabel(priority) {
   switch (priority) {
@@ -26,35 +26,15 @@ function minutesSince(date) {
 
 function formatTime(date) {
   if (!date) return "--:--";
-  return new Date(date).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  return new Date(date).toLocaleTimeString("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function Painel() {
-  const [patients, setPatients] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
+  const { patients, loadPatients, loading } = useAtendimento();
   const [tick, setTick] = useState(0); // trigger re-render for timers
-
-  const loadPatients = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const token = localStorage.getItem("token");
-      const data = await getApi("pacientes/fila", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setPatients(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Erro ao carregar fila:", err);
-      setPatients([]);
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadPatients();
-    window.addEventListener("patientsChanged", loadPatients);
-    return () => window.removeEventListener("patientsChanged", loadPatients);
-  }, [loadPatients]);
 
   // tick every 30s to update elapsed times
   useEffect(() => {
@@ -78,19 +58,36 @@ export default function Painel() {
     [patients]
   );
 
-  const current = useMemo(() => patients.find((p) => p.status === "EM_ATENDIMENTO"), [patients]);
+  const current = useMemo(
+    () => patients.find((p) => p.status === "EM_ATENDIMENTO"),
+    [patients]
+  );
+
 
   const stats = useMemo(() => {
     const total = (patients || []).length;
     const waiting = queue.length;
-    const alta = (queue || []).filter((p) => p.triage?.prioridade === "ALTA").length;
-    const media = (queue || []).filter((p) => p.triage?.prioridade === "MEDIA").length;
-    const baixa = (queue || []).filter((p) => p.triage?.prioridade === "BAIXA").length;
+    const alta = (queue || []).filter(
+      (p) => p.triage?.prioridade === "ALTA"
+    ).length;
+    const media = (queue || []).filter(
+      (p) => p.triage?.prioridade === "MEDIA"
+    ).length;
+    const baixa = (queue || []).filter(
+      (p) => p.triage?.prioridade === "BAIXA"
+    ).length;
 
     // average wait (minutes)
     const avgMinutes =
       queue.length > 0
-        ? Math.round(queue.reduce((acc, p) => acc + (Date.now() - new Date(p.createdAt)) / 60000, 0) / queue.length)
+        ? Math.round(
+            queue.reduce(
+              (acc, p) =>
+                acc +
+                (Date.now() - new Date(p.dataCadastro || p.createdAt)) / 60000,
+              0
+            ) / queue.length
+          )
         : 0;
 
     return { total, waiting, alta, media, baixa, avgMinutes };
@@ -101,27 +98,51 @@ export default function Painel() {
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-extrabold text-[#2f6f3d]">Painel de Atendimento</h1>
-          <p className="text-gray-500">Monitoramento em tempo real do atendimento hospitalar</p>
+          <h1 className="text-3xl font-extrabold text-[#2f6f3d]">
+            Painel de Atendimento
+          </h1>
+          <p className="text-gray-500">
+            Monitoramento em tempo real do atendimento hospitalar
+          </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
           {/* Stats */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 mb-6 ">
             <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-[#2f6f3d]">{stats.waiting}</div>
+              <div className="text-2xl font-bold text-[#2f6f3d]">
+                {stats.waiting}
+              </div>
               <div className="text-xs text-gray-500 mt-1">Total na Fila</div>
             </div>
             <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-[#b91c1c]">{stats.alta}</div>
+              <div className="text-2xl font-bold text-[#b91c1c]">
+                {stats.alta}
+              </div>
               <div className="text-xs text-gray-500 mt-1">Prioridade Alta</div>
             </div>
             <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-gray-700">{stats.avgMinutes > 0 ? `${stats.avgMinutes}m` : "--"}</div>
+              <div className="text-2xl font-bold text-[#b45309]">
+                {stats.media}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Prioridade Média</div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4 text-center">
+              <div className="text-2xl font-bold text-[#15803d]">
+                {stats.baixa}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Prioridade Baixa</div>
+            </div>
+            <div className="bg-white rounded-lg shadow p-4 text-center">
+              <div className="text-2xl font-bold text-gray-700">
+                {stats.avgMinutes > 0 ? `${stats.avgMinutes}m` : "--"}
+              </div>
               <div className="text-xs text-gray-500 mt-1">Tempo Médio</div>
             </div>
             <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-[#2f6f3d]">{stats.total}</div>
+              <div className="text-2xl font-bold text-[#2f6f3d]">
+                {stats.total}
+              </div>
               <div className="text-xs text-gray-500 mt-1">Total (hoje)</div>
             </div>
           </div>
@@ -135,8 +156,12 @@ export default function Painel() {
 
               <div className="flex items-center gap-3">
                 <div className="text-sm text-gray-500 flex items-center gap-2">
-                  <span className={`inline-block w-2 h-2 rounded-full ${refreshing ? "bg-red-400 animate-pulse" : "bg-green-400"}`} />
-                  {refreshing ? "Atualizando..." : "Ao vivo"}
+                  <span
+                    className={`inline-block w-2 h-2 rounded-full ${
+                      loading ? "bg-red-400 animate-pulse" : "bg-green-400"
+                    }`}
+                  />
+                  {loading ? "Atualizando..." : "Ao vivo"}
                 </div>
                 <button
                   onClick={loadPatients}
@@ -149,40 +174,63 @@ export default function Painel() {
             </div>
 
             {current ? (
-              <div className="rounded-lg overflow-hidden" style={{ background: "linear-gradient(90deg,#4f8f55,#609e60)" }}>
+              <div
+                className="rounded-lg overflow-hidden"
+                style={{ background: "linear-gradient(90deg,#4f8f55,#609e60)" }}
+              >
                 <div className="p-4 text-white">
                   <div className="flex items-start justify-between">
                     <div>
-                      <div className="text-xs uppercase opacity-90 font-semibold">Paciente em Atendimento</div>
+                      <div className="text-xs uppercase opacity-90 font-semibold">
+                        Paciente em Atendimento
+                      </div>
                       <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-white/80 text-xxs uppercase">Nome</div>
+                          <div className="text-white/80 text-xxs uppercase">
+                            Nome
+                          </div>
                           <div className="font-semibold">{current.nome}</div>
                         </div>
                         <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-white/80 text-xxs uppercase">Classificação</div>
-                          <div className="font-semibold">{renderPriorityLabel(current.triage?.prioridade)}</div>
+                          <div className="text-white/80 text-xxs uppercase">
+                            Classificação
+                          </div>
+                          <div className="font-semibold">
+                            {renderPriorityLabel(current.triage?.prioridade)}
+                          </div>
                         </div>
                         <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-white/80 text-xxs uppercase">Início</div>
-                          <div className="font-semibold">{formatTime(current.startTime || current.createdAt)}</div>
+                          <div className="text-white/80 text-xxs uppercase">
+                            Início
+                          </div>
+                          <div className="font-semibold">
+                            {formatTime(current?.atendimentos.horaInicio)}
+                          </div>
                         </div>
                         <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-white/80 text-xxs uppercase">Tempo Decorrido</div>
-                          <div className="font-semibold">{minutesSince(current.startTime || current.createdAt)}</div>
+                          <div className="text-white/80 text-xxs uppercase">
+                            Tempo Decorrido
+                          </div>
+                          <div className="font-semibold">
+                            {minutesSince(current?.atendimentos.horaInicio)}
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="text-right hidden sm:block">
-                      <div className="bg-white/20 px-3 py-1 rounded text-white/90">Status: EM ATENDIMENTO</div>
+                      <div className="bg-white/20 px-3 py-1 rounded text-white/90">
+                        Status: EM ATENDIMENTO
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
               <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-600">
-                <div className="text-lg font-medium mb-2">Nenhum paciente em atendimento</div>
+                <div className="text-lg font-medium mb-2">
+                  Nenhum paciente em atendimento
+                </div>
                 <div>Aguardando início de nova consulta médica</div>
               </div>
             )}
@@ -194,15 +242,24 @@ export default function Painel() {
               <h3 className="text-lg font-semibold flex items-center gap-2">
                 <FaListOl className="text-[#59995c]" /> Fila de Espera
                 <span className="ml-2 inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs">
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /> {queue.length} AGUARDANDO
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />{" "}
+                  {queue.length} AGUARDANDO
                 </span>
               </h3>
 
-              <div className="text-sm text-gray-500">Atualizado: {new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</div>
+              <div className="text-sm text-gray-500">
+                Atualizado:{" "}
+                {new Date().toLocaleTimeString("pt-BR", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
             </div>
 
             {queue.length === 0 ? (
-              <div className="empty-state p-8 text-center text-gray-500 rounded-lg">Fila de espera vazia</div>
+              <div className="empty-state p-8 text-center text-gray-500 rounded-lg">
+                Fila de espera vazia
+              </div>
             ) : (
               <ul className="space-y-4">
                 {queue.map((p, idx) => {
@@ -213,19 +270,28 @@ export default function Painel() {
                       ? "priority-media"
                       : "priority-baixa";
                   return (
-                    <li key={p.id} className={`queue-item ${priorityClass} p-4 rounded-lg flex justify-between items-center bg-white`}>
+                    <li
+                      key={p.id}
+                      className={`queue-item ${priorityClass} p-4 rounded-lg flex justify-between items-center bg-white`}
+                    >
                       <div className="flex items-center gap-4">
                         <div className="queue-position">{idx + 1}</div>
                         <div>
                           <div className="font-semibold">{p.nome}</div>
-                          <div className="text-sm text-gray-600">{renderPriorityLabel(p.triage?.prioridade)}</div>
+                          <div className="text-sm text-gray-600">
+                            {renderPriorityLabel(p.triage?.prioridade)}
+                          </div>
                         </div>
                       </div>
 
                       <div className="text-right text-sm text-gray-500">
                         <div>Aguardando há</div>
-                        <div className="font-semibold">{minutesSince(p.createdAt)}</div>
-                        <div className="text-xs text-gray-400 mt-1">{formatTime(p.createdAt)}</div>
+                        <div className="font-semibold">
+                          {minutesSince(p.triage.completedAt)}
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          {formatTime(p.triage.completedAt)}
+                        </div>
                       </div>
                     </li>
                   );
@@ -238,3 +304,5 @@ export default function Painel() {
     </div>
   );
 }
+
+

@@ -14,6 +14,7 @@ export default function Cadastro() {
     cep: "",
     endereco: "",
   });
+  
 
   const [cepSuggestions, setCepSuggestions] = useState([]);
   const [loadingCep, setLoadingCep] = useState(false);

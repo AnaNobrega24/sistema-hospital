@@ -54,6 +54,9 @@ export default function Header() {
         {/* Navegação */}
         <nav className="hidden md:flex space-x-1">
           <NavLink to="/" className={linkCls} end>
+            <i className="fas fa-user-plus mr-2"></i>Home
+          </NavLink>
+          <NavLink to="/cadastro" className={linkCls} end>
             <i className="fas fa-user-plus mr-2"></i>Cadastro
           </NavLink>
           <NavLink to="/triagem" className={linkCls}>

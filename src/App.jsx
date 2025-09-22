@@ -16,6 +16,7 @@ import Historico from './pages/Historico'
 import Relatorios from './pages/Relatorios'
 import './styles/App.css'
 import { AtendimentoProvider } from './context/AtendimentoContext'
+import BuscarPaciente from './pages/BuscarPaciente'
 
 export default function App() {
   return (
@@ -25,11 +26,12 @@ export default function App() {
         <Header />
         <main className="flex-grow bg-gray-50">
           <Routes>
+            <Route path="/" element={<BuscarPaciente />} />
             <Route path="/login" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
             <Route path="/historico" element={<Historico />} />
             <Route path="/relatorios" element={<Relatorios />} />
-            <Route path="/" element={<Cadastro />} />
+            <Route path="/cadastro" element={<Cadastro />} />
             <Route path="/triagem" element={<Triagem />} />
             <Route path="/medico" element={<Medico />} />
             <Route path="/painel" element={<Painel />} />

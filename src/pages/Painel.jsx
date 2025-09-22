@@ -35,6 +35,9 @@ function formatTime(date) {
 export default function Painel() {
   const { patients, loadPatients, loading } = useAtendimento();
   const [tick, setTick] = useState(0); // trigger re-render for timers
+  
+  
+  
 
   // tick every 30s to update elapsed times
   useEffect(() => {

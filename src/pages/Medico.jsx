@@ -1,5 +1,3 @@
-// src/components/Medico.jsx
-import React, { useEffect, useState, useMemo } from "react";
 import {
   FaUserMd,
   FaClock,
@@ -9,7 +7,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import { getApi, postApi, updateApi } from "../services/apiServices";
+import { postApi } from "../services/apiServices";
 import { useAtendimento } from "../context/AtendimentoContext";
 
 const renderPriority = (priority) => {
@@ -37,158 +35,91 @@ function timeSince(createdAt) {
 export default function Medico() {
   const user = useAtendimento();
   const patients = user.patients;
-  //const [patients, setPatients] = useState([])
-  const [form, setForm] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [atendimento, setAtendimento] = useState({});
 
-  // paciente em atendimento
-  const current = useMemo(
-    () => patients.find((p) => p.status === "EM_ATENDIMENTO"),
-    [patients]
-  );
-
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const load = async () => {
-      try {
-        const data = await getApi("pacientes/fila", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        user.setPatients(Array.isArray(data) ? data : []);
-      } catch (err) {
-        console.error("Erro ao carregar pacientes:", err);
-        user.setPatients([]);
-      }
-    };
-
-    load();
-    window.addEventListener("patientsChanged", load);
-    return () => window.removeEventListener("patientsChanged", load);
-  }, [user]);
-
-  // Substitua a função syncStatus no Medico.jsx por esta versão:
-
-  const syncStatus = async (id, paciente) => {
+  const syncStatus = async (id) => {
     const token = localStorage.getItem("token");
 
     try {
-      if (paciente.status) {
-        await updateApi(
-          `pacientes/${id}/status`,
-          { status: paciente.status },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-      }
-      if (paciente.status === "EM_ATENDIMENTO") {
-        await postApi(
-          "atendimentos/iniciar",
-          { pacienteId: id },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-      }
-      if (paciente.status === "CONCLUIDO" && paciente) {
-        await updateApi(
-          `atendimentos/finalizar/${atendimento.id}`,
-          {
-            pacienteId: id,
-            ...paciente,
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-      }
-
-      // IMPORTANTE: Dispara o evento para atualizar todos os componentes
-      window.dispatchEvent(new Event("patientsChanged"));
+      const encounter = await postApi(
+        "atendimentos/iniciar",
+        { pacienteId: id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      return encounter;
     } catch (err) {
       console.error("Erro sincronizando status:", err);
     }
   };
 
-  const updatePatientLocal = (id, changes = {}) => {
-    user.setPatients((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, ...changes } : p))
-    );
-  };
-
   const updatePatient = async (id, changes = {}) => {
-    updatePatientLocal(id, changes);
-    const paciente = patients.find((p) => p.id === id) || {};
-    const merged = { ...paciente, ...changes };
-    const res = await syncStatus(id, merged);
-    setAtendimento(res);
+    try {
+      // Atualizar o estado local imediatamente para responsividade
+      user.setPatients((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...changes } : p))
+      );
+
+      if (changes.status === "EM_ATENDIMENTO") {
+        // Criar encounter no backend
+        const encounter = await syncStatus(id);
+
+        // Atualizar o paciente local com as informações completas do encounter
+        user.setPatients((prev) =>
+          prev.map((p) =>
+            p.id === id
+              ? {
+                  ...p,
+                  status: "EM_ATENDIMENTO",
+                  atendimentos: [
+                    {
+                      id: encounter.id,
+                      horaInicio: encounter.horaInicio,
+                      status: encounter.status,
+                      medicoId: encounter.medicoId,
+                      // Campos clínicos inicialmente vazios
+                      sintomas: encounter.sintomas || "",
+                      cid10: encounter.cid10 || "",
+                      tipoAtendimento: encounter.tipoAtendimento || null,
+                      prescricao: encounter.prescricao || "",
+                      observacoes: encounter.observacoes || "",
+                      anamnese: encounter.anamnese || "",
+                      exames: encounter.exames || "",
+                      procedimentos: encounter.procedimentos || "",
+                      diagnostico: encounter.diagnostico || "",
+                      plano: encounter.plano || "",
+                      documentos: encounter.documentos || "",
+                    },
+                  ],
+                }
+              : p
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar paciente:", error);
+      // Reverter mudança local em caso de erro
+      user.setPatients((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, status: "AGUARDANDO" } : p))
+      );
+      alert("Erro ao iniciar atendimento. Tente novamente.");
+    }
   };
 
   const callNext = async () => {
-    const next = patients.find((p) => p.status === "AGUARDANDO");
+    const orderPatients = patients.sort((a, b) => {
+      const order = { ALTA: 3, MEDIA: 2, BAIXA: 1 };
+      const pa = (a.triage && a.triage.prioridade) || "";
+      const pb = (b.triage && b.triage.prioridade) || "";
+      return (order[pb] || 0) - (order[pa] || 0);
+    });
+    const next = orderPatients.find((p) => p.status === "AGUARDANDO");
+
     if (next) {
-      setForm({});
-      updatePatient(next.id, { status: "EM_ATENDIMENTO" });
+      await updatePatient(next.id, { status: "EM_ATENDIMENTO" });
+      localStorage.setItem("horaInicio", Date.now());
     }
   };
 
-  const openProntuario = (id) => {
-    setForm({});
-    updatePatient(id, { status: "EM_ATENDIMENTO" });
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // open confirmation modal (shows brief summary)
-  const askConfirmConclude = async () => {
-    if (!current) return;
-    if (!form.sintomas || !form.cid10) {
-      alert("Preencha pelo menos os sintomas e o CID-10 antes de concluir.");
-      return;
-    }
-
-    //syncStatus(current.id, current)
-
-    setConfirmOpen(true);
-  };
-
-  // confirm action
-  const confirmarConclusao = async () => {
-    if (!current) return;
-    setLoading(true);
-
-    try {
-      // update local paciente: status CONCLUIDO + atendimento
-      updatePatientLocal(current.id, {
-        status: "CONCLUIDO",
-        atendimento: { ...form },
-      });
-
-      // sync with backend (calls updatePatient which posts atendimento/concluir)
-      await syncStatus(current.id, { status: "CONCLUIDO", ...form });
-
-      // remove patient locally from list (optional — keeps history)
-      user.setPatients((prev) => prev.filter((p) => p.id !== current.id));
-      setForm({});
-      setConfirmOpen(false);
-
-      // call next automatically if present
-      setTimeout(() => {
-        callNext();
-      }, 300);
-    } catch (err) {
-      console.error("Erro ao concluir:", err);
-      alert("Erro ao concluir atendimento. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Filtrar pacientes por status
   const fila = patients
     .filter((p) => p.status === "AGUARDANDO")
     .sort((a, b) => {
@@ -197,6 +128,8 @@ export default function Medico() {
       const pb = (b.triage && b.triage.prioridade) || "";
       return (order[pb] || 0) - (order[pa] || 0);
     });
+
+  const emAtendimento = patients.filter((p) => p.status === "EM_ATENDIMENTO");
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
@@ -211,197 +144,93 @@ export default function Medico() {
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
-          {/* Paciente em atendimento header (green) */}
-          {current && (
-            <div
-              className="rounded-lg overflow-hidden mb-6"
-              style={{ background: "linear-gradient(90deg,#4f8f55,#609e60)" }}
-            >
-              <div className="p-4 text-white">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 bg-white/10 rounded-md">
-                      <FaUserMd />
-                    </div>
-                    <div>
-                      <div className="text-sm uppercase text-white/90 font-semibold">
-                        Paciente em Atendimento
-                      </div>
-                      <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-xxs text-white/80 uppercase">
-                            Nome do Paciente
+          {/* Botão Chamar Próximo */}
+          <div className="text-center py-8">
+            {fila.length > 0 ? (
+              <button
+                onClick={callNext}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#2f6f3d] text-white rounded hover:bg-[#285a30]"
+              >
+                <FaUserMd /> Chamar Próximo
+              </button>
+            ) : (
+              <div className="text-gray-500">
+                Nenhum paciente aguardando na fila.
+              </div>
+            )}
+          </div>
+
+          {/* Pacientes em Atendimento */}
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-3">
+              <FaUserMd className="text-[#2f6f3d]" /> Pacientes em Atendimento{" "}
+              <span className="ml-2 text-sm text-gray-500">
+                ({emAtendimento.length})
+              </span>
+            </h3>
+
+            {emAtendimento.length === 0 ? (
+              <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-600">
+                <div className="text-lg font-medium mb-2">
+                  Nenhum paciente em atendimento
+                </div>
+                <div>Aguardando início de nova consulta médica</div>
+              </div>
+            ) : (
+              <ul className="space-y-4">
+                {emAtendimento.map((p) => {
+                  const priority = renderPriority(p.triage?.prioridade);
+                  return (
+                    <li
+                      key={p.id}
+                      className="bg-green-50 border border-green-200 rounded-lg p-4 flex justify-between items-start"
+                    >
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <div>
+                            <div className="font-semibold flex items-center gap-2">
+                              {p.nome}
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                EM ATENDIMENTO
+                              </span>
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {p.triage?.motivo || "Motivo não informado"}
+                            </div>
                           </div>
-                          <div className="font-semibold">{current.nome}</div>
-                        </div>
-                        <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-xxs text-white/80 uppercase">
-                            Motivo da Consulta
-                          </div>
-                          <div className="font-semibold">
-                            {current.triage?.motivo || "—"}
-                          </div>
-                        </div>
-                        <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-xxs text-white/80 uppercase">
-                            Temperatura
-                          </div>
-                          <div className="font-semibold">
-                            {current.triage?.temperatura || "—"}
-                          </div>
-                        </div>
-                        <div className="bg-white/10 p-3 rounded text-xs">
-                          <div className="text-xxs text-white/80 uppercase">
-                            Pressão Arterial
-                          </div>
-                          <div className="font-semibold">
-                            {current.triage?.pressaoSanguinea ||
-                              current.triage?.pressao ||
-                              "—"}
-                          </div>
-                        </div>
-                        <div className="bg-white/10 p-3 rounded text-xs flex items-center gap-2">
                           <div
-                            className={`w-3 h-3 rounded-full ${
-                              renderPriority(current.triage?.prioridade)
-                                .color === "red"
+                            className={`ml-4 w-3 h-3 rounded-full ${
+                              priority.color === "red"
                                 ? "bg-red-500"
-                                : renderPriority(current.triage?.prioridade)
-                                    .color === "yellow"
+                                : priority.color === "yellow"
                                 ? "bg-yellow-400"
                                 : "bg-green-400"
                             }`}
-                          ></div>
-                          <div>
-                            <div className="text-xxs text-white/80 uppercase">
-                              Classificação de Risco
-                            </div>
-                            <div className="font-semibold">
-                              {renderPriority(current.triage?.prioridade).label}
-                            </div>
-                          </div>
+                          />
+                        </div>
+
+                        <div className="mt-2 text-sm text-gray-500 flex items-center gap-3">
+                          <FaClock /> Em atendimento há{" "}
+                          <span className="font-semibold">
+                            {timeSince(p.updatedAt || p.createdAt)}
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  </div>
 
-                  <div className="text-right text-sm">
-                    <div className="bg-white/20 px-3 py-1 rounded text-white/90">
-                      Status: EM ATENDIMENTO
-                    </div>
-                    <div className="text-white/90 text-xs mt-2 flex items-center gap-2">
-                      <FaClock /> {timeSince(current.createdAt)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Form */}
-          {current ? (
-            <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div className="bg-white rounded border p-4">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <FaExclamationCircle className="text-[#2f6f3d]" /> Sinais e
-                    Sintomas
-                  </h4>
-                  <textarea
-                    name="sintomas"
-                    rows={5}
-                    value={form.sintomas || ""}
-                    onChange={handleChange}
-                    placeholder="Descreva os sinais e sintomas observados..."
-                    className="w-full border rounded p-3 text-sm"
-                  />
-                </div>
-
-                <div className="bg-white rounded border p-4">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <FaFileMedical className="text-[#2f6f3d]" /> Diagnóstico
-                  </h4>
-
-                  <label className="text-xs text-gray-500">Código CID-10</label>
-                  <input
-                    name="cid10"
-                    value={form.cid10 || ""}
-                    onChange={handleChange}
-                    placeholder="Ex: K52.9 - Gastroenterite"
-                    className="w-full border rounded p-2 mt-1 mb-3 text-sm"
-                  />
-
-                  <label className="text-xs text-gray-500">
-                    Tipo de Atendimento
-                  </label>
-                  <select
-                    name="tipoAtendimento"
-                    value={form.tipoAtendimento || ""}
-                    onChange={handleChange}
-                    className="w-full border rounded p-2 mt-1 text-sm"
-                  >
-                    <option value="">Selecione o tipo</option>
-                    <option value="AMBULATORIAL">Ambulatorial</option>
-                    <option value="URGENCIA">Urgência</option>
-                    <option value="INTERNACAO">Internação</option>
-                  </select>
-                </div>
-
-                <div className="bg-white rounded border p-4">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <FaFileMedical className="text-[#2f6f3d]" /> Prescrição
-                    Médica
-                  </h4>
-                  <textarea
-                    name="prescricao"
-                    rows={4}
-                    value={form.prescricao || ""}
-                    onChange={handleChange}
-                    placeholder="Digite a prescrição médica..."
-                    className="w-full border rounded p-3 text-sm"
-                  />
-                </div>
-
-                <div className="bg-white rounded border p-4">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    <FaFileMedical className="text-[#2f6f3d]" /> Observações
-                  </h4>
-                  <textarea
-                    name="observacoes"
-                    rows={4}
-                    value={form.observacoes || ""}
-                    onChange={handleChange}
-                    placeholder="Observações gerais sobre o atendimento..."
-                    className="w-full border rounded p-3 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="mb-6">
-                <button
-                  onClick={askConfirmConclude}
-                  className="w-full bg-[#2f6f3d] hover:bg-[#285a30] text-white py-3 rounded font-semibold flex items-center justify-center gap-3"
-                >
-                  <FaCheck /> CONCLUIR ATENDIMENTO
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-8">
-              {fila.length > 0 ? (
-                <button
-                  onClick={callNext}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-[#2f6f3d] text-white rounded hover:bg-[#285a30]"
-                >
-                  <FaUserMd /> Chamar Próximo
-                </button>
-              ) : (
-                <div className="text-gray-500">
-                  Nenhum paciente aguardando na fila.
-                </div>
-              )}
-            </div>
-          )}
+                      <div className="flex flex-col items-end gap-3">
+                        <Link
+                          to={`/prontuario/${p.id}`}
+                          className="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                        >
+                          Abrir Prontuário
+                        </Link>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
 
           {/* Fila de Espera */}
           <div className="mt-6">
@@ -429,7 +258,13 @@ export default function Medico() {
                           </div>
                         </div>
                         <div
-                          className={`ml-4 text-xs px-3 py-1 rounded-full text-${priority.color}-700 bg-${priority.color}-100`}
+                          className={`ml-4 w-3 h-3 rounded-full ${
+                            priority.color === "red"
+                              ? "bg-red-500"
+                              : priority.color === "yellow"
+                              ? "bg-yellow-400"
+                              : "bg-green-400"
+                          }`}
                         />
                       </div>
 
@@ -439,25 +274,6 @@ export default function Medico() {
                           {timeSince(p.createdAt)}
                         </span>
                       </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-3">
-                      <Link
-                        to={`/prontuario/${p.id}`}
-                        onClick={() => openProntuario(p.id)}
-                        className="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
-                      >
-                        Abrir Prontuário
-                      </Link>
-
-                      <button
-                        onClick={() =>
-                          updatePatient(p.id, { status: "EM_ATENDIMENTO" })
-                        }
-                        className="px-3 py-1 border rounded text-sm text-[#2f6f3d] hover:bg-green-50"
-                      >
-                        Chamar
-                      </button>
                     </div>
                   </li>
                 );
@@ -469,57 +285,6 @@ export default function Medico() {
           </div>
         </div>
       </div>
-
-      {/* Confirmation modal */}
-      {confirmOpen && current && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
-            <h3 className="text-lg font-semibold mb-3">
-              Confirmar Conclusão do Atendimento
-            </h3>
-
-            <div className="mb-4 text-sm text-gray-700">
-              <p>
-                <strong>Paciente:</strong> {current.nome}
-              </p>
-              <p>
-                <strong>Motivo:</strong> {current.triage?.motivo || "—"}
-              </p>
-              <p>
-                <strong>Prioridade:</strong>{" "}
-                {renderPriority(current.triage?.prioridade).label}
-              </p>
-              <p className="mt-2 text-xs text-gray-500">
-                Ao confirmar, o atendimento será marcado como concluído e os
-                dados serão enviados para o servidor.
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setConfirmOpen(false)}
-                className="px-4 py-2 rounded border text-sm hover:bg-gray-50"
-              >
-                <FaTimes className="inline mr-2" /> Cancelar
-              </button>
-
-              <button
-                onClick={confirmarConclusao}
-                disabled={loading}
-                className="px-4 py-2 rounded bg-[#2f6f3d] text-white flex items-center gap-2 hover:bg-[#285a30]"
-              >
-                {loading ? (
-                  "Confirmando..."
-                ) : (
-                  <>
-                    <FaCheck /> Confirmar
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

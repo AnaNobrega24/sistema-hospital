@@ -9,11 +9,11 @@ import {
   FaCheck,
 } from "react-icons/fa";
 import { postApi } from "../services/apiServices";
+import { toast } from "react-toastify";
 
 // Componente reutilizável para input com ícone e label
 function InputWithIcon({
   label,
-  icon: Icon,
   value,
   onChange,
   placeholder,
@@ -32,7 +32,7 @@ function InputWithIcon({
       {label && <div className="text-xs text-gray-600 mb-2">{label}</div>}
       <div className="relative">
         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-          <Icon />
+          <FaUser />
         </div>
         <input
           type={type}
@@ -125,7 +125,7 @@ export default function Registro() {
     e.preventDefault();
     // Validações básicas
     if (!form.nome || form.nome.trim().length < 2)
-      return alert("Nome inválido");
+      return toast.error("Nome inválido");
     if (!validateEmail(form.email)) return alert("Email inválido");
     const pwd = checkPasswordStrength(form.senha);
     if (pwd.level === "weak" || !pwd.level) return alert("Senha muito fraca");
@@ -133,7 +133,7 @@ export default function Registro() {
       form.role === "MEDICO" &&
       (!form.especialidade || form.especialidade.trim().length < 2)
     )
-      return alert("Especialidade obrigatória para Médicos");
+      return toast.error("Especialidade obrigatória para Médicos");
 
     setSubmitting(true);
     try {
@@ -145,7 +145,7 @@ export default function Registro() {
         especialidade: form.role === "MEDICO" ? form.especialidade : undefined,
       };
       await postApi("auth/register", payload);
-      alert("Usuário registrado com sucesso");
+      toast.sucess("Usuário registrado com sucesso");
       setForm({
         nome: "",
         email: "",
@@ -162,7 +162,7 @@ export default function Registro() {
       });
     } catch (err) {
       console.error(err);
-      alert("Erro ao registrar usuário");
+      toast.error("Erro ao registrar usuário");
     } finally {
       setSubmitting(false);
     }
@@ -200,7 +200,6 @@ export default function Registro() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <InputWithIcon
                 label="Nome completo"
-                icon={FaUser}
                 value={form.nome}
                 onChange={(e) => updateField("nome", e.target.value)}
                 placeholder="Digite o nome completo"

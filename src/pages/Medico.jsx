@@ -6,9 +6,10 @@ import {
   FaCheck,
   FaTimes,
 } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { postApi } from "../services/apiServices";
 import { useAtendimento } from "../context/AtendimentoContext";
+import { toast } from "react-toastify";
 
 const renderPriority = (priority) => {
   switch (priority) {
@@ -34,6 +35,7 @@ function timeSince(createdAt) {
 
 export default function Medico() {
   const user = useAtendimento();
+  const navigate = useNavigate()
   const patients = user.patients;
 
   const syncStatus = async (id) => {
@@ -47,7 +49,34 @@ export default function Medico() {
       );
       return encounter;
     } catch (err) {
-      console.error("Erro sincronizando status:", err);
+      if (err.response) {
+        const { status, data } = err.response;
+
+        switch (status) {
+          case 400:
+            toast.error(data.message || "Dados Inválidos");
+            break;
+
+          case 401:
+            toast.error("Não autorizado. Faça login novamente.");
+            localStorage.removeItem("token");
+            navigate("/login");
+            break;
+
+          case 403:
+          toast.error('Sem permissão para esta operação');
+          break;
+          
+          
+        case 500:
+          toast.error('Erro interno do servidor. Tente novamente.');
+          break;
+          
+        default:
+          toast.error(data.message || `Erro ${status}: ${err.message}`);
+          break;
+        }
+      }
     }
   };
 

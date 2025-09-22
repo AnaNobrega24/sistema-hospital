@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { Icons, toast } from "react-toastify";
 import { updateApi } from "../services/apiServices";
-import { FaUserMd, FaIdCard, FaSearch, FaUserPlus } from "react-icons/fa";
+import { FaUserMd, FaIdCard, FaSearch } from "react-icons/fa";
 
 // Componente Input com ícone centralizado
 function InputWithIcon({
-  icon: Icon,
   type = "text",
   placeholder,
   name,
@@ -25,7 +24,7 @@ function InputWithIcon({
         required
       />
       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-        <Icon />
+        <FaIdCard />
       </div>
     </div>
   );
@@ -142,7 +141,6 @@ export default function BuscarPaciente() {
               CPF do Paciente
             </label>
             <InputWithIcon
-              icon={FaIdCard}
               type="text"
               name="cpf"
               value={cpf}

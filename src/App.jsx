@@ -26,8 +26,8 @@ export default function App() {
         <Header />
         <main className="flex-grow bg-gray-50">
           <Routes>
-            <Route path="/" element={<BuscarPaciente />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/busca-paciente" element={<BuscarPaciente />} />
+            <Route path="/" element={<Login />} />
             <Route path="/registro" element={<Registro />} />
             <Route path="/historico" element={<Historico />} />
             <Route path="/relatorios" element={<Relatorios />} />

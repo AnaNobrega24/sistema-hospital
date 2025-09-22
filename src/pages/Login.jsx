@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { postApi } from '../services/apiServices';
 import { FaEnvelope, FaLock, FaSignInAlt, FaUserMd } from 'react-icons/fa';
 
 // Componente Input com ícone centralizado
-function InputWithIcon({ icon: Icon, type = 'text', placeholder, name, value, onChange }) {
+function InputWithIcon({ type = 'text', placeholder, name, value, onChange }) {
   return (
     <div className="relative">
       <input
@@ -18,7 +18,7 @@ function InputWithIcon({ icon: Icon, type = 'text', placeholder, name, value, on
         required
       />
       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-        <Icon />
+        <FaEnvelope />
       </div>
     </div>
   );
@@ -46,7 +46,11 @@ export default function Login() {
       const response = await postApi('auth/login', formData);
       localStorage.setItem('token', response.token);
       toast.success('Login realizado com sucesso!');
-      navigate('/triagem');
+      if(response.user.role === "ATENDENTE") {
+        navigate("/busca-paciente")
+      } else if(response.user.role === "MEDICO") {
+        navigate("/medico")
+      }
     } catch (err) {
       console.error('Erro no login:', err);
       toast.error('Email ou senha inválidos. Tente novamente.');
@@ -74,7 +78,6 @@ export default function Login() {
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">E-mail</label>
             <InputWithIcon
-              icon={FaEnvelope}
               type="email"
               name="email"
               value={formData.email}
@@ -117,6 +120,17 @@ export default function Login() {
           >
             Esqueceu sua senha?
           </button>
+        </div>
+
+        <div className="text-center mt-4">
+          <Link to={"/registro"}>
+            <button
+              type="button"
+              className="text-sm text-[#59995c] hover:underline"
+            >
+              Não possui uma conta ainda?
+            </button>
+          </Link>
         </div>
       </div>
     </div>

@@ -1,15 +1,10 @@
-import {
-  FaUserMd,
-  FaClock,
-  FaExclamationCircle,
-  FaFileMedical,
-  FaCheck,
-  FaTimes,
-} from "react-icons/fa";
+// src/pages/Medico.jsx
+import React, { useEffect, useState } from "react";
+import { FaUserMd, FaClock, FaFileMedical } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
-import { postApi } from "../services/apiServices";
-import { useAtendimento } from "../context/AtendimentoContext";
+import { getApi, postApi } from "../services/apiServices";
 import { toast } from "react-toastify";
+import { handleApiError } from "../utils/apiUtils";
 
 const renderPriority = (priority) => {
   switch (priority) {
@@ -33,10 +28,66 @@ function timeSince(createdAt) {
   return `${minutes}m`;
 }
 
+// Retorna a triagem mais recente de um paciente
+const getLatestTriage = (patient) => {
+  if (!patient) return null;
+  const t = patient.triage;
+  if (!t) return null;
+  if (Array.isArray(t)) {
+    if (t.length === 0) return null;
+    // reduz para a triagem com createdAt mais recente (fallback para compare por id se createdAt ausente)
+    return t.reduce((latest, curr) => {
+      try {
+        const ld = new Date(latest.createdAt || latest.data || latest.updatedAt || 0).getTime();
+        const cd = new Date(curr.createdAt || curr.data || curr.updatedAt || 0).getTime();
+        return cd >= ld ? curr : latest;
+      } catch (e) {
+        console.log(e);
+        
+        return curr || latest;
+      }
+    });
+  }
+  // se já for objeto único
+  return t;
+};
+
 export default function Medico() {
-  const user = useAtendimento();
-  const navigate = useNavigate()
-  const patients = user.patients;
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  // Carregar pacientes da fila (AGUARDANDO e EM_ATENDIMENTO)
+  useEffect(() => {
+    const loadPatients = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        handleApiError({ status: 401 }, navigate);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const data = await getApi("pacientes/fila", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setPatients(Array.isArray(data) ? data : []);
+
+      } catch (err) {
+        console.error("Erro ao carregar fila de pacientes:", err);
+        handleApiError(err, navigate);
+        setPatients([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPatients();
+
+    // Event listeners
+    window.addEventListener("patientsChanged", loadPatients);
+    return () => window.removeEventListener("patientsChanged", loadPatients);
+  }, []);
 
   const syncStatus = async (id) => {
     const token = localStorage.getItem("token");
@@ -49,41 +100,16 @@ export default function Medico() {
       );
       return encounter;
     } catch (err) {
-      if (err.response) {
-        const { status, data } = err.response;
-
-        switch (status) {
-          case 400:
-            toast.error(data.message || "Dados Inválidos");
-            break;
-
-          case 401:
-            toast.error("Não autorizado. Faça login novamente.");
-            localStorage.removeItem("token");
-            navigate("/");
-            break;
-
-          case 403:
-          toast.error('Sem permissão para esta operação');
-          break;
-          
-          
-        case 500:
-          toast.error('Erro interno do servidor. Tente novamente.');
-          break;
-          
-        default:
-          toast.error(data.message || `Erro ${status}: ${err.message}`);
-          break;
-        }
-      }
+      console.error("Erro ao iniciar atendimento:", err);
+      handleApiError(err, navigate);
+      throw err;
     }
   };
 
   const updatePatient = async (id, changes = {}) => {
     try {
       // Atualizar o estado local imediatamente para responsividade
-      user.setPatients((prev) =>
+      setPatients((prev) =>
         prev.map((p) => (p.id === id ? { ...p, ...changes } : p))
       );
 
@@ -92,7 +118,7 @@ export default function Medico() {
         const encounter = await syncStatus(id);
 
         // Atualizar o paciente local com as informações completas do encounter
-        user.setPatients((prev) =>
+        setPatients((prev) =>
           prev.map((p) =>
             p.id === id
               ? {
@@ -126,18 +152,19 @@ export default function Medico() {
     } catch (error) {
       console.error("Erro ao atualizar paciente:", error);
       // Reverter mudança local em caso de erro
-      user.setPatients((prev) =>
+      setPatients((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status: "AGUARDANDO" } : p))
       );
-      alert("Erro ao iniciar atendimento. Tente novamente.");
+      toast.error("Erro ao iniciar atendimento. Tente novamente.");
     }
   };
 
   const callNext = async () => {
-    const orderPatients = patients.sort((a, b) => {
+    // Não mutar o estado original: criar cópia
+    const orderPatients = [...patients].sort((a, b) => {
       const order = { ALTA: 3, MEDIA: 2, BAIXA: 1 };
-      const pa = (a.triage && a.triage.prioridade) || "";
-      const pb = (b.triage && b.triage.prioridade) || "";
+      const pa = getLatestTriage(a)?.prioridade || "";
+      const pb = getLatestTriage(b)?.prioridade || "";
       return (order[pb] || 0) - (order[pa] || 0);
     });
     const next = orderPatients.find((p) => p.status === "AGUARDANDO");
@@ -153,8 +180,8 @@ export default function Medico() {
     .filter((p) => p.status === "AGUARDANDO")
     .sort((a, b) => {
       const order = { ALTA: 3, MEDIA: 2, BAIXA: 1 };
-      const pa = (a.triage && a.triage.prioridade) || "";
-      const pb = (b.triage && b.triage.prioridade) || "";
+      const pa = getLatestTriage(a)?.prioridade || "";
+      const pb = getLatestTriage(b)?.prioridade || "";
       return (order[pb] || 0) - (order[pa] || 0);
     });
 
@@ -167,9 +194,7 @@ export default function Medico() {
           <h2 className="text-2xl font-extrabold text-[#2f6f3d]">
             Atendimento Médico
           </h2>
-          <p className="text-gray-500">
-            Consultas e acompanhamento de pacientes
-          </p>
+          <p className="text-gray-500">Consultas e acompanhamento de pacientes</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow p-6">
@@ -178,13 +203,15 @@ export default function Medico() {
             {fila.length > 0 ? (
               <button
                 onClick={callNext}
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#2f6f3d] text-white rounded hover:bg-[#285a30]"
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[#2f6f3d] text-white rounded hover:bg-[#285a30] disabled:opacity-50"
               >
-                <FaUserMd /> Chamar Próximo
+                <FaUserMd />
+                {loading ? "Carregando..." : "Chamar Próximo"}
               </button>
             ) : (
               <div className="text-gray-500">
-                Nenhum paciente aguardando na fila.
+                {loading ? "Carregando..." : "Nenhum paciente aguardando na fila."}
               </div>
             )}
           </div>
@@ -192,23 +219,20 @@ export default function Medico() {
           {/* Pacientes em Atendimento */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-3">
-              <FaUserMd className="text-[#2f6f3d]" /> Pacientes em Atendimento{" "}
-              <span className="ml-2 text-sm text-gray-500">
-                ({emAtendimento.length})
-              </span>
+              <FaUserMd className="text-[#2f6f3d]" /> Pacientes em Atendimento{' '}
+              <span className="ml-2 text-sm text-gray-500">({emAtendimento.length})</span>
             </h3>
 
             {emAtendimento.length === 0 ? (
               <div className="bg-gray-50 rounded-lg p-8 text-center text-gray-600">
-                <div className="text-lg font-medium mb-2">
-                  Nenhum paciente em atendimento
-                </div>
+                <div className="text-lg font-medium mb-2">Nenhum paciente em atendimento</div>
                 <div>Aguardando início de nova consulta médica</div>
               </div>
             ) : (
               <ul className="space-y-4">
                 {emAtendimento.map((p) => {
-                  const priority = renderPriority(p.triage?.prioridade);
+                  const latestTriage = getLatestTriage(p);
+                  const priority = renderPriority(latestTriage?.prioridade);
                   return (
                     <li
                       key={p.id}
@@ -224,7 +248,7 @@ export default function Medico() {
                               </span>
                             </div>
                             <div className="text-sm text-gray-600">
-                              {p.triage?.motivo || "Motivo não informado"}
+                              {latestTriage?.motivo || "Motivo não informado"}
                             </div>
                           </div>
                           <div
@@ -239,9 +263,9 @@ export default function Medico() {
                         </div>
 
                         <div className="mt-2 text-sm text-gray-500 flex items-center gap-3">
-                          <FaClock /> Em atendimento há{" "}
+                          <FaClock /> Em atendimento há{' '}
                           <span className="font-semibold">
-                            {timeSince(p.updatedAt || p.createdAt)}
+                            {timeSince(p.updatedAt || latestTriage?.createdAt || p.createdAt)}
                           </span>
                         </div>
                       </div>
@@ -264,15 +288,14 @@ export default function Medico() {
           {/* Fila de Espera */}
           <div className="mt-6">
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-3">
-              <FaFileMedical className="text-[#2f6f3d]" /> Fila de Espera{" "}
-              <span className="ml-2 text-sm text-gray-500">
-                ({fila.length})
-              </span>
+              <FaFileMedical className="text-[#2f6f3d]" /> Fila de Espera{' '}
+              <span className="ml-2 text-sm text-gray-500">({fila.length})</span>
             </h3>
 
             <ul className="space-y-4">
               {fila.map((p) => {
-                const priority = renderPriority(p.triage?.prioridade);
+                const latestTriage = getLatestTriage(p);
+                const priority = renderPriority(latestTriage?.prioridade);
                 return (
                   <li
                     key={p.id}
@@ -283,7 +306,7 @@ export default function Medico() {
                         <div>
                           <div className="font-semibold">{p.nome}</div>
                           <div className="text-sm text-gray-600">
-                            {p.triage?.motivo || "Motivo não informado"}
+                            {latestTriage?.motivo || "Motivo não informado"}
                           </div>
                         </div>
                         <div
@@ -298,16 +321,14 @@ export default function Medico() {
                       </div>
 
                       <div className="mt-2 text-sm text-gray-500 flex items-center gap-3">
-                        <FaClock /> Aguardando há{" "}
-                        <span className="font-semibold">
-                          {timeSince(p.createdAt)}
-                        </span>
+                        <FaClock /> Aguardando há{' '}
+                        <span className="font-semibold">{timeSince(latestTriage?.createdAt || p.createdAt)}</span>
                       </div>
                     </div>
                   </li>
                 );
               })}
-              {fila.length === 0 && (
+              {fila.length === 0 && !loading && (
                 <li className="text-center text-gray-500 py-6">Fila vazia</li>
               )}
             </ul>

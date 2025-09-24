@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { postApi } from '../services/apiServices';
 import { FaEnvelope, FaLock, FaSignInAlt, FaUserMd } from 'react-icons/fa';
+import { useAuth } from '../contexts/AuthContext';
 
 // Componente Input com ícone centralizado
-function InputWithIcon({ type = 'text', placeholder, name, value, onChange }) {
+function InputWithIcon({ type = 'text', placeholder, name, value, onChange, icon }) {
+  const Icon = icon || FaEnvelope;
   return (
     <div className="relative">
       <input
@@ -18,7 +20,7 @@ function InputWithIcon({ type = 'text', placeholder, name, value, onChange }) {
         required
       />
       <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-        <FaEnvelope />
+        <Icon />
       </div>
     </div>
   );
@@ -26,6 +28,7 @@ function InputWithIcon({ type = 'text', placeholder, name, value, onChange }) {
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({ email: '', senha: '' });
   const [loading, setLoading] = useState(false);
 
@@ -44,12 +47,25 @@ export default function Login() {
     setLoading(true);
     try {
       const response = await postApi('auth/login', formData);
-      localStorage.setItem('token', response.token);
+
+      // salvar token no localStorage (continua necessário para chamadas à API)
+      if (response.token) localStorage.setItem('token', response.token);
+
+      // atualizar contexto de autenticação com os dados do usuário
+      if (response.user) {
+        login(response.user);
+      }
+
       toast.success('Login realizado com sucesso!');
-      if(response.user.role === "ATENDENTE") {
-        navigate("/busca-paciente")
-      } else if(response.user.role === "MEDICO") {
-        navigate("/medico")
+
+      // redirecionar conforme role (mantive sua lógica)
+      if (response.user?.role === 'ATENDENTE') {
+        navigate('/busca-paciente');
+      } else if (response.user?.role === 'MEDICO') {
+        navigate('/medico');
+      } else {
+        // rota fallback
+        navigate('/');
       }
     } catch (err) {
       console.error('Erro no login:', err);
@@ -83,6 +99,7 @@ export default function Login() {
               value={formData.email}
               onChange={handleChange}
               placeholder="Digite seu e-mail"
+              icon={FaEnvelope}
             />
           </div>
 
@@ -123,11 +140,8 @@ export default function Login() {
         </div>
 
         <div className="text-center mt-4">
-          <Link to={"/registro"}>
-            <button
-              type="button"
-              className="text-sm text-[#59995c] hover:underline"
-            >
+          <Link to={'/registro'}>
+            <button type="button" className="text-sm text-[#59995c] hover:underline">
               Não possui uma conta ainda?
             </button>
           </Link>

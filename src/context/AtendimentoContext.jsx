@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { getApi } from "../services/apiServices";
 import { toast } from "react-toastify";
@@ -16,13 +17,16 @@ export function AtendimentoProvider({ children }) {
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const [lastFetchTime, setLastFetchTime] = useState(null);
-
-  // Estados para controle de erro mais granular
-  const [errorType, setErrorType] = useState(null); // 'network', 'auth', 'server', 'unknown'
+  const [errorType, setErrorType] = useState(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
+  // Refs para evitar loops
+  const loadingRef = useRef(false);
+  const mountedRef = useRef(false);
+  const abortControllerRef = useRef(null);
+
   const MAX_RETRIES = 3;
-  const RETRY_DELAY = 1000; // 1 segundo
+  const RETRY_DELAY = 1000;
 
   // Função para verificar se o usuário está autenticado
   const isAuthenticated = useCallback(() => {
@@ -32,38 +36,48 @@ export function AtendimentoProvider({ children }) {
 
   // Função para determinar se deve fazer retry baseado no erro
   const shouldRetry = useCallback((error, currentRetryCount) => {
-    // Não faz retry se já excedeu o limite
     if (currentRetryCount >= MAX_RETRIES) return false;
-
-    // Não faz retry para erros de autenticação ou validação
     if ([401, 403, 422].includes(error.status)) return false;
-
-    // Faz retry para erros de rede ou servidor
-    if (!error.status || [500, 502, 503, 504].includes(error.status))
-      return true;
-
+    if (!error.status || [500, 502, 503, 504].includes(error.status)) return true;
     return false;
   }, []);
 
   // Função para aguardar antes do retry
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Função principal para carregar pacientes
+  // Função principal para carregar pacientes - REMOVIDO loading das dependências
   const loadPatients = useCallback(
     async (isRetry = false) => {
+      // Evita execução se componente foi desmontado
+      if (!mountedRef.current) return;
+
       // Se não está autenticado, limpa tudo e sai
       if (!isAuthenticated()) {
         setPatients([]);
         setError(null);
         setErrorType(null);
         setLoading(false);
+        loadingRef.current = false;
         return;
       }
 
-      // Evita múltiplas requisições simultâneas
-      if (loading && !isRetry) return;
+      // Evita múltiplas requisições simultâneas usando ref
+      if (loadingRef.current && !isRetry) {
+        console.log("⏳ Carregamento já em andamento, ignorando nova requisição");
+        return;
+      }
 
+      // Cancela requisição anterior se existir
+      if (abortControllerRef.current && !isRetry) {
+        abortControllerRef.current.abort();
+      }
+
+      // Cria novo controller para esta requisição
+      abortControllerRef.current = new AbortController();
+
+      loadingRef.current = true;
       setLoading(true);
+
       if (!isRetry) {
         setError(null);
         setErrorType(null);
@@ -72,16 +86,21 @@ export function AtendimentoProvider({ children }) {
 
       try {
         console.log(
-          `🔄 Carregando pacientes... ${
+          `📄 Carregando pacientes... ${
             isRetry ? `(retry ${retryCount + 1})` : ""
           }`
         );
-        const token = localStorage.getItem("token")
+
+        const token = localStorage.getItem("token");
         const data = await getApi("pacientes", {
           headers: { Authorization: `Bearer ${token}` },
+          signal: abortControllerRef.current.signal, // Adiciona signal para cancelamento
         });
 
-        // Sucesso - limpa estados de erro e atualiza dados
+        // Verifica se componente ainda está montado antes de atualizar estado
+        if (!mountedRef.current) return;
+
+        // Sucesso - atualiza todos os estados de uma vez para evitar múltiplas renderizações
         setPatients(Array.isArray(data) ? data : []);
         setError(null);
         setErrorType(null);
@@ -91,10 +110,19 @@ export function AtendimentoProvider({ children }) {
 
         console.log("✅ Pacientes carregados com sucesso:", data?.length || 0);
       } catch (err) {
+        // Se a requisição foi cancelada, não processa o erro
+        if (err.name === 'AbortError') {
+          console.log("🚫 Requisição cancelada");
+          return;
+        }
+
+        // Verifica se componente ainda está montado
+        if (!mountedRef.current) return;
+
         console.error("❌ Erro ao carregar pacientes:", err);
 
         setError(err);
-        setPatients([]); // Limpa a lista em caso de erro
+        setPatients([]);
 
         // Classificar tipo de erro
         let currentErrorType = "unknown";
@@ -118,18 +146,19 @@ export function AtendimentoProvider({ children }) {
             `🔄 Tentando novamente em ${RETRY_DELAY}ms... (tentativa ${newRetryCount}/${MAX_RETRIES})`
           );
 
-          // Toast informativo para o usuário
           if (newRetryCount === 1) {
             toast.info("Erro ao carregar pacientes. Tentando novamente...", {
               autoClose: 2000,
             });
           }
 
-          // Aguarda e tenta novamente
-          await delay(RETRY_DELAY * newRetryCount); // Delay progressivo
+          // Libera loading antes do retry
+          loadingRef.current = false;
+          setLoading(false);
+
+          await delay(RETRY_DELAY * newRetryCount);
           return loadPatients(true);
         } else {
-          // Não vai mais tentar - mostra erro definitivo
           setIsRetrying(false);
 
           // Mensagens específicas por tipo de erro
@@ -137,23 +166,17 @@ export function AtendimentoProvider({ children }) {
             case "network":
               toast.error(
                 "Sem conexão com o servidor. Verifique sua internet.",
-                {
-                  autoClose: 5000,
-                }
+                { autoClose: 5000 }
               );
               break;
 
             case "auth":
-              // Erro de autenticação já é tratado no interceptor
-              // Não mostra toast adicional aqui
               break;
 
             case "server":
               toast.error(
                 "Servidor temporariamente indisponível. Tente novamente mais tarde.",
-                {
-                  autoClose: 5000,
-                }
+                { autoClose: 5000 }
               );
               break;
 
@@ -161,9 +184,7 @@ export function AtendimentoProvider({ children }) {
               if (retryCount > 0) {
                 toast.error(
                   `Não foi possível carregar os pacientes após ${retryCount} tentativas.`,
-                  {
-                    autoClose: 5000,
-                  }
+                  { autoClose: 5000 }
                 );
               } else {
                 toast.error("Erro ao carregar lista de pacientes.", {
@@ -173,10 +194,13 @@ export function AtendimentoProvider({ children }) {
           }
         }
       } finally {
-        setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+          loadingRef.current = false;
+        }
       }
     },
-    [isAuthenticated, retryCount, shouldRetry, loading]
+    [isAuthenticated, retryCount, shouldRetry] // REMOVIDO loading das dependências
   );
 
   // Função para retry manual
@@ -185,14 +209,14 @@ export function AtendimentoProvider({ children }) {
     loadPatients();
   }, [loadPatients]);
 
-  // Função para verificar se os dados estão "frescos" (menos de 5 minutos)
+  // Função para verificar se os dados estão "frescos"
   const isDataFresh = useCallback(() => {
     if (!lastFetchTime) return false;
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     return lastFetchTime > fiveMinutesAgo;
   }, [lastFetchTime]);
 
-  // Função para refresh inteligente (só carrega se necessário)
+  // Função para refresh inteligente
   const refreshPatients = useCallback(
     (force = false) => {
       if (force || !isDataFresh() || error) {
@@ -202,20 +226,36 @@ export function AtendimentoProvider({ children }) {
     [loadPatients, isDataFresh, error]
   );
 
-  // Carregamento inicial
+  // EFEITO DE MONTAGEM - executa apenas uma vez
   useEffect(() => {
-    loadPatients();
-  }, [loadPatients]);
+    mountedRef.current = true;
+    
+    // Carrega dados apenas se ainda não estão sendo carregados
+    if (!loadingRef.current) {
+      loadPatients();
+    }
 
-  // Escuta o evento customizado para recarregar
+    // Cleanup ao desmontar
+    return () => {
+      mountedRef.current = false;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []); // DEPENDÊNCIAS VAZIAS - executa apenas na montagem
+
+  // Escuta eventos - useEffect separado com dependências estáveis
   useEffect(() => {
     const handlePatientsChanged = () => {
-      refreshPatients(true); // Force refresh quando há mudanças
+      if (mountedRef.current) {
+        refreshPatients(true);
+      }
     };
 
     const handleWindowFocus = () => {
-      // Recarrega dados quando o usuário volta para a aba (se não estão frescos)
-      refreshPatients();
+      if (mountedRef.current) {
+        refreshPatients();
+      }
     };
 
     window.addEventListener("patientsChanged", handlePatientsChanged);
@@ -227,22 +267,23 @@ export function AtendimentoProvider({ children }) {
     };
   }, [refreshPatients]);
 
-  // Demais funções do contexto...
-  const updatePatient = (id, changes) => {
+  // Outras funções do contexto
+  const updatePatient = useCallback((id, changes) => {
     setPatients((prev) =>
       prev.map((p) => (p.id === id ? { ...p, ...changes } : p))
     );
-  };
+  }, []);
 
-  const removePatient = (id) => {
+  const removePatient = useCallback((id) => {
     setPatients((prev) => prev.filter((p) => p.id !== id));
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     setError(null);
     setErrorType(null);
-  };
+  }, []);
 
+  // Valor do contexto - usando useMemo para evitar re-criações desnecessárias
   const value = {
     // Dados
     patients,

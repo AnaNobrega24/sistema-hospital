@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-
 import {
   FaUser,
   FaEnvelope,
@@ -10,6 +9,7 @@ import {
 } from "react-icons/fa";
 import { postApi } from "../services/apiServices";
 import { toast } from "react-toastify";
+import { useNavigate } from "react-router-dom";
 
 // Componente reutilizável para input com ícone e label
 function InputWithIcon({
@@ -62,6 +62,8 @@ export default function Registro() {
     senha: null,
     especialidade: null,
   });
+
+  const navigate = useNavigate()
 
   const validateEmail = (v) =>
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").toLowerCase());
@@ -144,8 +146,9 @@ export default function Registro() {
         role: form.role,
         especialidade: form.role === "MEDICO" ? form.especialidade : undefined,
       };
+      
       await postApi("auth/register", payload);
-      toast.sucess("Usuário registrado com sucesso");
+      toast.success("Usuário registrado com sucesso");
       setForm({
         nome: "",
         email: "",
@@ -160,6 +163,7 @@ export default function Registro() {
         senha: null,
         especialidade: null,
       });
+     navigate("/") 
     } catch (err) {
       console.error(err);
       toast.error("Erro ao registrar usuário");

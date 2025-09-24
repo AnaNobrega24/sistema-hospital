@@ -60,7 +60,7 @@ export default function Medico() {
           case 401:
             toast.error("Não autorizado. Faça login novamente.");
             localStorage.removeItem("token");
-            navigate("/login");
+            navigate("/");
             break;
 
           case 403:

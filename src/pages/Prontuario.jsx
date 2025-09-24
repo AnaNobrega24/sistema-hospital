@@ -47,7 +47,10 @@ export default function Prontuario() {
     return patients.find((p) => p.id === Number(id));
   }, [patients, id]);
 
-  const atendimentoAtual = paciente.atendimentos.find(
+  console.log(paciente);
+  
+
+  const atendimentoAtual = paciente?.atendimentos.find(
     (a) => a.status === "EM_ATENDIMENTO"
   );
 

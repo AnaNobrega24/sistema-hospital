@@ -67,6 +67,7 @@ export default function Triagem() {
       });
 
       // cria triagem
+      
       await postApi("pacientes/triagem", pacienteTriado, {
         headers: { Authorization: `Bearer ${token}` },
       });

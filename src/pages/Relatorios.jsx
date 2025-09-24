@@ -14,6 +14,7 @@ import {
 } from "chart.js";
 import Spinner from "../components/Spinner";
 import StatCard from "../components/relatorios/StatCard";
+import { Filler } from "chart.js";
 
 // Registrar módulos do Chart.js
 ChartJS.register(

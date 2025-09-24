@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Icons, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { updateApi } from "../services/apiServices";
 import { FaUserMd, FaIdCard, FaSearch } from "react-icons/fa";
 

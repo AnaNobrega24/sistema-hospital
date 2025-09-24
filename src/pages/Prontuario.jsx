@@ -1,6 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useAtendimento } from "../context/AtendimentoContext";
 import { getApi, updateApi } from "../services/apiServices";
 
 import {
@@ -11,6 +10,7 @@ import {
   FaCheck,
   FaTimes,
 } from "react-icons/fa";
+import { handleApiError } from "../utils/apiUtils";
 
 const renderPriority = (priority) => {
   switch (priority) {
@@ -37,24 +37,45 @@ function timeSince(createdAt) {
 export default function Prontuario() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { patients, setPatients } = useAtendimento();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const token = localStorage.getItem("token");
+  const [patient, setPatient] = useState(null);
+  const [form, setForm] = useState({});
 
-  // Buscar o paciente específico no array de pacientes
-  const paciente = useMemo(() => {
-    return patients.find((p) => p.id === Number(id));
-  }, [patients, id]);
+  const loadPatients = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      handleApiError({ status: 401 }, navigate);
+      return;
+    }
 
+    try {
+      setLoading(true);
+      const data = await getApi(`pacientes/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const atendimentoAtual = data?.atendimentos.find(
+        (a) => a.status === "EM_ATENDIMENTO"
+      );
+      setPatient(data);
+      setForm(atendimentoAtual)
+    } catch (err) {
+      console.error("Erro ao carregar painel:", err);
+      handleApiError(err, navigate);
+      setPatient(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  
+  useEffect(() => {
+    loadPatients();
 
-  const atendimentoAtual = paciente?.atendimentos.find(
-    (a) => a.status === "EM_ATENDIMENTO"
-  );
-
-  const [form, setForm] = useState({ ...atendimentoAtual });
+    // Event listeners
+    window.addEventListener("patientsChanged", loadPatients);
+    return () => window.removeEventListener("patientsChanged", loadPatients);
+  }, [navigate]);
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -62,43 +83,32 @@ export default function Prontuario() {
 
   const updatePatient = async (id, changes = {}) => {
     try {
-      setPatients((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, ...changes } : p))
-      );
+      setPatient({ ...patient, ...changes });
 
       if (changes.status === "CONCLUIDO") {
         // Criar encounter no backend
         await syncStatus(id, form);
 
-        const pacienteAtualizado = await getApi(`pacientes/${paciente.id}`, {
+        const pacienteAtualizado = await getApi(`pacientes/${patient.id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
 
         // Atualizar o paciente local com as informações completas do encounter
-        setPatients((prev) =>
-          prev.map((p) =>
-            p.id === id
-              ? {
-                  ...pacienteAtualizado,
-                }
-              : p
-          )
-        );
+        setPatient({ ...pacienteAtualizado, ...changes });
       }
     } catch (error) {
       console.error("Erro ao atualizar paciente:", error);
       // Reverter mudança local em caso de erro
-      setPatients((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: "AGUARDANDO" } : p))
-      );
+      setPatient({ ...patient, ...changes });
       alert("Erro ao iniciar atendimento. Tente novamente.");
     }
   };
 
   const askConfirmConclude = () => {
-    if (!paciente) return;
+    if (!patient) return;
+
     if (!form.sintomas || !form.cid10) {
       alert("Preencha pelo menos os sintomas e o CID-10 antes de concluir.");
       return;
@@ -108,13 +118,13 @@ export default function Prontuario() {
   };
 
   const confirmarConclusao = async () => {
-    if (!paciente) return;
+    if (!patient) return;
     setLoading(true);
 
     try {
       // Atualizar o paciente no contexto COM A PROPRIEDADE CORRETA
 
-      await updatePatient(paciente.id, { status: "CONCLUIDO" });
+      await updatePatient(patient.id, { status: "CONCLUIDO" });
 
       // Atualizar localStorage
       const stored = JSON.parse(localStorage.getItem("patients")) || [];
@@ -158,7 +168,7 @@ export default function Prontuario() {
     }
   };
 
-  if (!paciente) {
+  if (!patient) {
     return (
       <div className="min-h-screen bg-gray-100 py-10 px-4">
         <div className="max-w-5xl mx-auto">
@@ -201,14 +211,14 @@ export default function Prontuario() {
                         <div className="text-xs text-white/80 uppercase">
                           Nome do Paciente
                         </div>
-                        <div className="font-semibold">{paciente.nome}</div>
+                        <div className="font-semibold">{patient.nome}</div>
                       </div>
                       <div className="bg-white/10 p-3 rounded text-xs">
                         <div className="text-xs text-white/80 uppercase">
                           Motivo da Consulta
                         </div>
                         <div className="font-semibold">
-                          {paciente.triage?.motivo || "—"}
+                          {patient.triage?.motivo || "—"}
                         </div>
                       </div>
                       <div className="bg-white/10 p-3 rounded text-xs">
@@ -216,7 +226,7 @@ export default function Prontuario() {
                           Temperatura
                         </div>
                         <div className="font-semibold">
-                          {paciente.triage?.temperatura || "—"}
+                          {patient.triage?.temperatura || "—"}
                         </div>
                       </div>
                       <div className="bg-white/10 p-3 rounded text-xs">
@@ -224,18 +234,18 @@ export default function Prontuario() {
                           Pressão Arterial
                         </div>
                         <div className="font-semibold">
-                          {paciente.triage?.pressaoSanguinea ||
-                            paciente.triage?.pressao ||
+                          {patient.triage?.pressaoSanguinea ||
+                            patient.triage?.pressao ||
                             "—"}
                         </div>
                       </div>
                       <div className="bg-white/10 p-3 rounded text-xs flex items-center gap-2">
                         <div
                           className={`w-3 h-3 rounded-full ${
-                            renderPriority(paciente.triage?.prioridade)
-                              .color === "red"
+                            renderPriority(patient.triage?.prioridade).color ===
+                            "red"
                               ? "bg-red-500"
-                              : renderPriority(paciente.triage?.prioridade)
+                              : renderPriority(patient.triage?.prioridade)
                                   .color === "yellow"
                               ? "bg-yellow-400"
                               : "bg-green-400"
@@ -246,7 +256,7 @@ export default function Prontuario() {
                             Classificação de Risco
                           </div>
                           <div className="font-semibold">
-                            {renderPriority(paciente.triage?.prioridade).label}
+                            {renderPriority(patient.triage?.prioridade).label}
                           </div>
                         </div>
                       </div>
@@ -259,7 +269,7 @@ export default function Prontuario() {
                     Status: EM ATENDIMENTO
                   </div>
                   <div className="text-white/90 text-xs mt-2 flex items-center gap-2">
-                    <FaClock /> {timeSince(paciente.createdAt)}
+                    <FaClock /> {timeSince(patient.createdAt)}
                   </div>
                 </div>
               </div>
@@ -363,14 +373,14 @@ export default function Prontuario() {
 
               <div className="mb-4 text-sm text-gray-700">
                 <p>
-                  <strong>Paciente:</strong> {paciente.nome}
+                  <strong>Paciente:</strong> {patient.nome}
                 </p>
                 <p>
-                  <strong>Motivo:</strong> {paciente.triage?.motivo || "—"}
+                  <strong>Motivo:</strong> {patient.triage?.motivo || "—"}
                 </p>
                 <p>
                   <strong>Prioridade:</strong>{" "}
-                  {renderPriority(paciente.triage?.prioridade).label}
+                  {renderPriority(patient.triage?.prioridade).label}
                 </p>
                 <p className="mt-2 text-xs text-gray-500">
                   Ao confirmar, o atendimento será marcado como concluído e os

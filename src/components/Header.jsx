@@ -1,18 +1,31 @@
-// src/components/Header.jsx
-
 import React, { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { HiUserCircle } from "react-icons/hi2";
-import { useAtendimento } from "../context/AtendimentoContext";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function Header() {
-  const { user } = useAtendimento();
+  const { user, logout } = useAuth();
+  const location = useLocation();
   const [time, setTime] = useState(new Date());
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  
+  
+  // Rotas que NÃO devem mostrar o Header
+  const routesWithoutHeader = ["/", "/registro"];
+  
+
+  // Se estiver numa rota que não deve mostrar header, não renderiza nada
+  const verifyRoutes = () => {
+    if (routesWithoutHeader.includes(location.pathname)) {
+      return null;
+    } else {
+      const id = setInterval(() => setTime(new Date()), 1000);
+      return () => clearInterval(id);
+    }
+  };
 
   useEffect(() => {
-    const id = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(id);
+    verifyRoutes()
   }, []);
 
   const linkCls = ({ isActive }) =>
@@ -24,12 +37,14 @@ export default function Header() {
 
   const handleLogout = () => {
     if (window.confirm("Tem certeza que deseja sair do sistema?")) {
-      alert("Logout realizado com sucesso!");
-      // Aqui entraria sua lógica de logout
+      logout();
+      // Redirecionar para login se necessário
+      window.location.href = "/";
     }
   };
 
   return (
+    
     <header className="relative shadow-lg sticky top-0 z-50 border-b border-white/10">
       {/* Gradiente animado */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#59995c] via-[#4a8049] to-[#5ea361] animate-[shimmer_3s_infinite] pointer-events-none rounded-b-lg"></div>
@@ -54,7 +69,7 @@ export default function Header() {
         {/* Navegação */}
         <nav className="hidden md:flex space-x-1">
           <NavLink to="/" className={linkCls} end>
-            <i className="fas fa-user-plus mr-2"></i>Home
+            <i className="fas fa-chart-bar mr-2"></i>Home
           </NavLink>
           <NavLink to="/cadastro" className={linkCls} end>
             <i className="fas fa-user-plus mr-2"></i>Cadastro
@@ -140,7 +155,7 @@ export default function Header() {
              transition shadow-md hover:shadow-lg"
                     >
                       <i className="fas fa-clipboard-list"></i>
-                      <span>Relatorios</span>
+                      <span>Relatórios</span>
                     </NavLink>
                     <NavLink
                       to="/historico"
@@ -149,10 +164,10 @@ export default function Header() {
              transition shadow-md hover:shadow-lg"
                     >
                       <i className="fas fa-clipboard-list"></i>
-                      <span>Historico</span>
+                      <span>Histórico</span>
                     </NavLink>
                     <NavLink
-                      to="/historico"
+                      to="/registro"
                       className="flex items-center space-x-3 px-4 py-2 rounded-lg text-white/90 
              bg-white/20 hover:bg-white/30 
              transition shadow-md hover:shadow-lg"

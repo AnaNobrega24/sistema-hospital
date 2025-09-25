@@ -10,7 +10,9 @@ import {
   FaCheck,
   FaTimes,
 } from "react-icons/fa";
-import { handleApiError } from "../utils/apiUtils";
+import { handleApiError, isAuthenticated } from "../utils/apiUtils";
+import NotAuthorization from "../components/NotAuthorization";
+import { toast } from "react-toastify";
 
 const renderPriority = (priority) => {
   switch (priority) {
@@ -24,6 +26,7 @@ const renderPriority = (priority) => {
       return { label: "Não definida", color: "gray" };
   }
 };
+
 
 function timeSince(createdAt) {
   if (!createdAt) return "--";
@@ -42,7 +45,34 @@ export default function Prontuario() {
   const token = localStorage.getItem("token");
   const [patient, setPatient] = useState(null);
   const [form, setForm] = useState({});
+  const [user, setUser] = useState(null)
 
+  useEffect(() => {
+      const checkAuth = () => {
+        if (!isAuthenticated()) {
+          toast.error("Sessão expirada. Faça login novamente.", {
+            autoClose: 3000,
+          });
+          // Remove dados do localStorage
+          localStorage.removeItem("user");
+          localStorage.removeItem("token");
+          // Redireciona para login após um delay
+          setTimeout(() => {
+            navigate("/");
+          }, 2000);
+          return;
+        }
+        
+        // Se autenticado, carrega os dados do usuário
+        const userData = JSON.parse(localStorage.getItem("user"));
+        setUser(userData);
+      };
+  
+      checkAuth();
+    }, [navigate]);
+
+    console.log(user);
+    
   const loadPatients = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -182,7 +212,8 @@ export default function Prontuario() {
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
-      <div className="max-w-5xl mx-auto">
+      {user && user.role === "MEDICO" ? (
+        <div className="max-w-5xl mx-auto">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-extrabold text-[#2f6f3d]">
             Prontuário Médico
@@ -414,6 +445,9 @@ export default function Prontuario() {
           </div>
         )}
       </div>
+      ): (
+        <NotAuthorization />
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { FaClock, FaUserMd, FaListOl } from "react-icons/fa";
 import { getApi } from "../services/apiServices";
 import { useNavigate } from "react-router-dom";
 import { handleApiError } from "../utils/apiUtils";
+import NotAuthorization from "../components/NotAuthorization";
 
 function renderPriorityLabel(priority) {
   switch (priority) {
@@ -80,6 +81,7 @@ export default function Painel() {
   const [loading, setLoading] = useState(false);
   const [tick, setTick] = useState(0); // trigger re-render for timers
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("user"))
 
   // Função para carregar pacientes
   const loadPatients = async () => {
@@ -164,7 +166,8 @@ export default function Painel() {
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
-      <div className="max-w-6xl mx-auto">
+      {user ? (
+        <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-3xl font-extrabold text-[#2f6f3d]">Painel de Atendimento</h1>
@@ -313,6 +316,9 @@ export default function Painel() {
           </div>
         </div>
       </div>
+      ): (
+        <NotAuthorization />
+      )}
     </div>
   );
 }

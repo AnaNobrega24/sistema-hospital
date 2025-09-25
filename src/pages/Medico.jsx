@@ -5,6 +5,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { getApi, postApi } from "../services/apiServices";
 import { toast } from "react-toastify";
 import { handleApiError } from "../utils/apiUtils";
+import { useAuth } from "../contexts/AuthContext";
+import NotAuthorization from "../components/NotAuthorization";
 
 const renderPriority = (priority) => {
   switch (priority) {
@@ -55,6 +57,7 @@ const getLatestTriage = (patient) => {
 export default function Medico() {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(false);
+  const {user} = useAuth()
   const navigate = useNavigate();
 
   // Carregar pacientes da fila (AGUARDANDO e EM_ATENDIMENTO)
@@ -188,7 +191,9 @@ export default function Medico() {
   const emAtendimento = patients.filter((p) => p.status === "EM_ATENDIMENTO");
 
   return (
-    <div className="min-h-screen bg-gray-100 py-10 px-4">
+    <div>
+      {user && user.role === "MEDICO" ? (
+        <div className="min-h-screen bg-gray-100 py-10 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-6">
           <h2 className="text-2xl font-extrabold text-[#2f6f3d]">
@@ -335,6 +340,10 @@ export default function Medico() {
           </div>
         </div>
       </div>
+    </div>
+      ) : (
+        <NotAuthorization />
+      )}
     </div>
   );
 }

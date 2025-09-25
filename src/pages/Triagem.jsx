@@ -17,6 +17,7 @@ import { getApi, postApi, updateApi } from "../services/apiServices";
 import { useLocation, useNavigate } from "react-router-dom";
 //import { toast } from "react-toastify";
 import { handleApiError } from "../utils/apiUtils";
+import NotAuthorization from "../components/NotAuthorization";
 
 export default function Triagem() {
   const [patients, setPatients] = useState([]);
@@ -24,6 +25,7 @@ export default function Triagem() {
   const [loadingSend, setLoadingSend] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("user"))
 
   useEffect(() => {
     const loadPatients = async () => {
@@ -133,7 +135,8 @@ export default function Triagem() {
 
   return (
     <div className="min-h-screen bg-gray-100 py-10 px-4">
-      <div className="max-w-5xl mx-auto">
+      {user && user.role === "MEDICO" ? (
+        <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="text-center mb-6">
           <h1 className="text-2xl font-extrabold text-[#2f6f3d]">
@@ -422,6 +425,9 @@ export default function Triagem() {
           })}
         </div>
       </div>
+      ): (
+        <NotAuthorization />
+      )}
     </div>
   );
 }

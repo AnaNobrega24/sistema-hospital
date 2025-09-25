@@ -47,11 +47,9 @@ export default function Login() {
     setLoading(true);
     try {
       const response = await postApi('auth/login', formData);
-
-      // salvar token no localStorage (continua necessário para chamadas à API)
-      if (response.token) localStorage.setItem('token', response.token);
-
-      // atualizar contexto de autenticação com os dados do usuário
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+      } 
       if (response.user) {
         login(response.user);
       }

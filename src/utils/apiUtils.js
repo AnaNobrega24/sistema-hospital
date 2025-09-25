@@ -41,10 +41,14 @@ export function useApiData(endpoint, dependencies = []) {
   const [error, setError] = useState(null);
   const navigate = useNavigate()
   const loadData = useCallback(async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
+    const user = localStorage.getItem("user");
+    if (!user) {
       toast.error("Sessão expirada. Faça login novamente.");
-      if (navigate) navigate("/");
+      if (navigate) {
+        setTimeout(() => {
+          navigate("/");
+        }, 3000);
+      }
       return;
     }
 
@@ -52,7 +56,7 @@ export function useApiData(endpoint, dependencies = []) {
       setLoading(true);
       setError(null);
       const result = await getApi(endpoint, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${user.token}` },
       });
       setData(Array.isArray(result) ? result : []);
     } catch (err) {
@@ -76,8 +80,9 @@ export function useApiData(endpoint, dependencies = []) {
  * Função para verificar se token existe e é válido
  */
 export function isAuthenticated() {
-  const token = localStorage.getItem("token");
-  if (!token) return false;
+  const token = localStorage.getItem("token")
+  const user = localStorage.getItem("user");
+  if (!user) return false;
   
   try {
     // Verifica se o token não expirou (se você usar JWT)

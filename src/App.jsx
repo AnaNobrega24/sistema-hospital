@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Header from "./components/Header";
@@ -19,11 +19,18 @@ import { AuthProvider } from "./contexts/AuthContext";
 import "./styles/App.css";
 
 export default function App() {
+  const location = useLocation();
+
+  // Define as rotas onde o header não deve aparecer
+  const routesWithoutHeader = ["/", "/registro"];
+
+  // Verifica se a rota atual está na lista de rotas sem header
+  const shouldShowHeader = !routesWithoutHeader.includes(location.pathname);
   return (
     <AuthProvider>
       <div className="flex flex-col min-h-screen">
         <ToastContainer autoClose={3000} hideProgressBar />
-        <Header />
+        {shouldShowHeader && <Header />}
         <main className="flex-grow bg-gray-50">
           <Routes>
             {/* Rotas públicas (sem contexto de atendimento) */}

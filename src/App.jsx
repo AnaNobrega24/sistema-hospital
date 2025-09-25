@@ -17,6 +17,7 @@ import Relatorios from "./pages/Relatorios";
 
 import { AuthProvider } from "./contexts/AuthContext";
 import "./styles/App.css";
+import NotFound from "./components/NotFound";
 
 export default function App() {
   const location = useLocation();
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="/prontuario/:id" element={<Prontuario />} />
             <Route path="/historico" element={<Historico />} />
             <Route path="/relatorios" element={<Relatorios />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Footer />

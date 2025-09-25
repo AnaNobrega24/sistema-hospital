@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { updateApi } from "../services/apiServices";
 import { FaUserMd, FaIdCard, FaSearch } from "react-icons/fa";
+import NotAuthorization from "../components/NotAuthorization";
 
 // Componente Input com ícone centralizado
 function InputWithIcon({
@@ -66,7 +67,8 @@ export default function BuscarPaciente() {
   const navigate = useNavigate();
   const [cpf, setCpf] = useState("");
   const [loading, setLoading] = useState(false);
-  const token = localStorage.getItem("token");
+  const user = localStorage.getItem("user");
+  
 
   const handleCPFChange = (e) => {
     const value = e.target.value.replace(/\D/g, "");
@@ -94,15 +96,11 @@ export default function BuscarPaciente() {
       const response = await updateApi(
         `pacientes/buscar`,
         { documento: formatDocumento(cleanCPF) },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${user.token}` } }
       );
 
       if (response.encontrado) {
         toast.success("Paciente encontrado!");
-        // Redirecionar para página de detalhes do paciente ou triagem
-        setTimeout(() => {
-          navigate("/triagem");
-        }, 2000);
       } else {
         toast.info(
           "Paciente não encontrado. Você será redirecionado para a página de cadastro"
@@ -122,7 +120,8 @@ export default function BuscarPaciente() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="login-container w-full max-w-md p-8 bg-white rounded-2xl shadow-lg relative">
+      {user ? (
+        <div className="login-container w-full max-w-md p-8 bg-white rounded-2xl shadow-lg relative">
         {/* Header com ícone igual ao login */}
         <div className="hospital-logo text-center mb-8">
           <div className="w-16 h-16 rounded-full bg-[#2f6f3d] text-white flex items-center justify-center mx-auto mb-4 shadow-lg">
@@ -162,6 +161,9 @@ export default function BuscarPaciente() {
           </button>
         </form>
       </div>
+      ): (
+        <NotAuthorization />
+      )}
     </div>
   );
 }

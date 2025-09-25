@@ -1,7 +1,19 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { postApi } from "../services/apiServices";
-import { FaUser, FaCalendar, FaIdCard, FaPhone, FaMapMarkerAlt, FaHome, FaSearch, FaUserPlus } from "react-icons/fa";
+import {
+  FaUser,
+  FaCalendar,
+  FaIdCard,
+  FaPhone,
+  FaMapMarkerAlt,
+  FaHome,
+  FaSearch,
+  FaUserPlus,
+} from "react-icons/fa";
+import NotAuthorization from "../components/NotAuthorization";
+import { isAuthenticated } from "../utils/apiUtils";
+import { toast } from "react-toastify";
 
 export default function Cadastro() {
   const navigate = useNavigate();
@@ -14,11 +26,35 @@ export default function Cadastro() {
     cep: "",
     endereco: "",
   });
-  
-
+  const [user, setUser] = useState(null);
   const [cepSuggestions, setCepSuggestions] = useState([]);
   const [loadingCep, setLoadingCep] = useState(false);
   const [cepValid, setCepValid] = useState(false);
+  const token = localStorage.getItem("token")
+
+  useEffect(() => {
+    const checkAuth = () => {
+      if (!isAuthenticated()) {
+        toast.error("Sessão expirada. Faça login novamente.", {
+          autoClose: 3000,
+        });
+        // Remove dados do localStorage
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+        // Redireciona para login após um delay
+        setTimeout(() => {
+          navigate("/");
+        }, 2000);
+        return;
+      }
+      
+      // Se autenticado, carrega os dados do usuário
+      const userData = JSON.parse(localStorage.getItem("user"));
+      setUser(userData);
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -78,7 +114,6 @@ export default function Cadastro() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const token = localStorage.getItem("token");
 
     const novoPaciente = {
       id: Date.now(),
@@ -106,25 +141,40 @@ export default function Cadastro() {
 
   // Máscaras
   const formatDocumento = (val) =>
-    val.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})/, "$1-$2");
+    val
+      .replace(/\D/g, "")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})/, "$1-$2");
 
   const formatTelefone = (val) =>
-    val.replace(/\D/g, "").replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+    val
+      .replace(/\D/g, "")
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d)/, "$1-$2");
 
-  const formatCep = (val) => val.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
+  const formatCep = (val) =>
+    val.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
 
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4">
-      <div className="max-w-4xl mx-auto bg-white/90 backdrop-blur-lg p-8 rounded-2xl shadow-lg">
+      {user ? (
+        <div className="max-w-4xl mx-auto bg-white/90 backdrop-blur-lg p-8 rounded-2xl shadow-lg">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Cadastro de Paciente</h1>
-          <p className="text-gray-600">Preencha as informações do paciente para iniciar o atendimento</p>
+          <h1 className="text-3xl font-bold text-gray-800">
+            Cadastro de Paciente
+          </h1>
+          <p className="text-gray-600">
+            Preencha as informações do paciente para iniciar o atendimento
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Nome */}
           <div className="relative">
-            <label className="block text-sm font-semibold mb-1">Nome Completo</label>
+            <label className="block text-sm font-semibold mb-1">
+              Nome Completo
+            </label>
             <div className="relative">
               <input
                 type="text"
@@ -142,7 +192,9 @@ export default function Cadastro() {
           {/* Data de Nascimento e Documento */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
-              <label className="block text-sm font-semibold mb-1">Data de Nascimento</label>
+              <label className="block text-sm font-semibold mb-1">
+                Data de Nascimento
+              </label>
               <div className="relative">
                 <input
                   type="date"
@@ -157,14 +209,19 @@ export default function Cadastro() {
             </div>
 
             <div className="relative">
-              <label className="block text-sm font-semibold mb-1">Documento (CPF/RG)</label>
+              <label className="block text-sm font-semibold mb-1">
+                Documento (CPF/RG)
+              </label>
               <div className="relative">
                 <input
                   type="text"
                   name="documento"
                   value={paciente.documento}
                   onChange={(e) =>
-                    setPaciente((prev) => ({ ...prev, documento: formatDocumento(e.target.value) }))
+                    setPaciente((prev) => ({
+                      ...prev,
+                      documento: formatDocumento(e.target.value),
+                    }))
                   }
                   className="w-full border border-gray-300 rounded-lg p-3 pl-10 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400"
                   placeholder="000.000.000-00"
@@ -184,7 +241,10 @@ export default function Cadastro() {
                 name="telefone"
                 value={paciente.telefone}
                 onChange={(e) =>
-                  setPaciente((prev) => ({ ...prev, telefone: formatTelefone(e.target.value) }))
+                  setPaciente((prev) => ({
+                    ...prev,
+                    telefone: formatTelefone(e.target.value),
+                  }))
                 }
                 className="w-full border border-gray-300 rounded-lg p-3 pl-10 focus:outline-none focus:ring-2 focus:ring-green-400 focus:border-green-400"
                 placeholder="(11) 99999-9999"
@@ -203,11 +263,16 @@ export default function Cadastro() {
                 name="cep"
                 value={paciente.cep}
                 onChange={(e) =>
-                  setPaciente((prev) => ({ ...prev, cep: formatCep(e.target.value) }))
+                  setPaciente((prev) => ({
+                    ...prev,
+                    cep: formatCep(e.target.value),
+                  }))
                 }
                 onKeyDown={handleCepKeyDown}
                 className={`w-full border rounded-lg p-3 pl-10 focus:outline-none focus:ring-2 ${
-                  cepValid ? "focus:ring-green-500 border-green-500" : "focus:ring-green-400 border-gray-300"
+                  cepValid
+                    ? "focus:ring-green-500 border-green-500"
+                    : "focus:ring-green-400 border-gray-300"
                 }`}
                 placeholder="00000-000"
                 maxLength={9}
@@ -238,7 +303,9 @@ export default function Cadastro() {
           </div>
 
           <div className="relative">
-            <label className="block text-sm font-semibold mb-1">Endereço Completo</label>
+            <label className="block text-sm font-semibold mb-1">
+              Endereço Completo
+            </label>
             <div className="relative">
               <textarea
                 name="endereco"
@@ -262,6 +329,9 @@ export default function Cadastro() {
           </button>
         </form>
       </div>
+      ):(
+       <NotAuthorization />
+      )}
     </div>
   );
 }

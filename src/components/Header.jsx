@@ -215,17 +215,11 @@ export default function Header() {
 
         {/* Navegação */}
         <nav className="hidden md:flex space-x-1">
-          <NavLink to="/" className={linkCls} end>
+          <NavLink to="/medico" className={linkCls} end>
             <i className="fas fa-chart-bar mr-2"></i>Home
-          </NavLink>
-          <NavLink to="/cadastro" className={linkCls} end>
-            <i className="fas fa-user-plus mr-2"></i>Cadastro
           </NavLink>
           <NavLink to="/triagem" className={linkCls}>
             <i className="fas fa-stethoscope mr-2"></i>Triagem
-          </NavLink>
-          <NavLink to="/medico" className={linkCls}>
-            <i className="fas fa-user-md mr-2"></i>Médico
           </NavLink>
           <NavLink to="/painel" className={linkCls}>
             <i className="fas fa-chart-bar mr-2"></i>Painel
